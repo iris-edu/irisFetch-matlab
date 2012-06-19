@@ -66,7 +66,11 @@ classdef irisFetch
     % IRIS-DMC
     % February 2012
     
-    % 2012 Feb 27, fixed problem where channel epochs were missing from
+    % 2012 Feb 29, Fixed date parsing issues, allowing accuracy to
+    % millisecond level. Also fixed problem where filter numerators not
+    % showing up properly.
+    
+    % 2012 Feb 27, 1.1.1 fixed problem where channel epochs were missing from
     % flattened stations, and added ability to translate into both Long and
     % Integer java types.
     
@@ -81,7 +85,7 @@ classdef irisFetch
     
     methods(Static)
         function v = version()
-            v = '1.1.1';
+            v = '1.1.2';
         end
         
         function ts = Traces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity )
@@ -342,7 +346,7 @@ classdef irisFetch
             
             indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
             try
-                baseURL = varargin{indexOffsetOfBASEURL}
+                baseURL = varargin{indexOffsetOfBASEURL};
             catch 
                 % don't do anything
             end
@@ -449,7 +453,7 @@ classdef irisFetch
             indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
             
             try
-                baseURL = varargin{indexOffsetOfBASEURL}
+                baseURL = varargin{indexOffsetOfBASEURL};
             catch
                 % don't do anything
             end
@@ -464,7 +468,7 @@ classdef irisFetch
             criteria = ws.criteria.EventCriteria;
             criteria = irisFetch.setCriteria(criteria, varargin);
             if nargout == 2
-                urlParams = criteria.toUrlParams
+                urlParams = criteria.toUrlParams;
             end
             disp('fetching from IRIS-DMC')
             j_events = service.fetch(criteria);
@@ -663,21 +667,22 @@ classdef irisFetch
         %----------------------------------------------------------------
         function javadate = mdate2jdate(matlabdate)
             %mdate2jdate converts a matlab date to a java Date class
-            sdf = java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss.SSS');
-            sdf.setTimeZone(java.util.TimeZone.getTimeZone('UTC'));
-            matlabDateString = datestr(matlabdate,'yyyy-mm-dd HH:MM:SS.FFF');
-            javadate = sdf.parse(matlabDateString);
-        end
+            % TRUNCATES TO Milliseconds
+            javadate = java.util.Date;
+            javadate.setTime((datenum(matlabdate) - datenum(1970,1,1,0,0,0)) * 86400 * 1000);
+%             days_since_1970 = matlabdate - datenum(1970,1,1,0,0,0);
+%             javadate = java.util.Date.setTime(matlabdate - datenum(1970,1,1,0,0,0) * 1000)
+%             sdf = java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss.SSS');
+%             sdf.setTimeZone(java.util.TimeZone.getTimeZone('UTC'));
+%             matlabDateString = datestr(matlabdate,'yyyy-mm-dd HH:MM:SS.FFF');
+%             javadate = sdf.parse(matlabDateString);
+         end
         
         function matlabdate = jdate2mdate(javadate)
             % jdate2mdate converts a java Date class to a matlab datenum
-            % WARNING: NO MILLISECONDS!!!!
             try
-                matlabdate = datenum(javadate.toGMTString);
-                %...
-                %    javadate.getYear+1900,javadate.getMonth+1,javadate.getDate,...
-                %    javadate.getHours,javadate.getMinutes,javadate.getSeconds);
-                matlabdate=datestr(matlabdate,31);
+                matlabdate = datenum(1970,1,1,0,0, javadate.getTime() / 1000);
+                matlabdate=datestr(matlabdate,'yyyy-mm-dd HH:MM:SS.FFF');
             catch je
                 matlabdate = [];
             end
@@ -779,6 +784,9 @@ classdef irisFetch
                             double(thisObj.getReal),...
                             double(thisObj.getImaginary));
                         continue;
+                    case 'double'
+                        myStruct(n) = thisObj;
+                        continue;
                     otherwise
                 end
                 
@@ -799,7 +807,8 @@ classdef irisFetch
                     switch thisClass
                         case {'java.util.ArrayList','java.lang.String',...
                                 'java.util.Date','java.lang.Double',...
-                                'java.lang.Integer','java.math.BigInteger'}
+                                'java.lang.Integer','java.math.BigInteger',...
+                                'java.lang.Long'}
                             myStruct(n).(thisField) = irisFetch.parseJavaClass(objectInField);
                             
                         case {'edu.iris.dmc.ws.station.model.Sensitivity', 'edu.iris.dmc.ws.station.model.Sensor'}
@@ -882,7 +891,7 @@ classdef irisFetch
                 case 'java.util.Date'
                     val = irisFetch.jdate2mdate(obj);
                 case {'java.lang.Double','java.lang.Integer',...
-                        'java.math.BigInteger'}
+                        'java.math.BigInteger','java.lang.Long'}
                     val = double(obj);
                 otherwise %add the java object in anyway.
                     val=obj;
@@ -927,7 +936,7 @@ classdef irisFetch
                         
                         case 'java.util.Date'
                             criteria.(setMethod)(irisFetch.mdate2jdate(thisValue));
-                            criteria.toUrlParams
+                            criteria.toUrlParams;
                         case 'java.lang.Double'
                             criteria.(setMethod)(java.lang.Double(thisValue));
                             
