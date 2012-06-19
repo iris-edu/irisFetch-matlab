@@ -67,6 +67,10 @@ classdef irisFetch
    % IRIS-DMC
    % February 2012
    
+   % 2012 June 14 r1.3.1
+   % Fixed problem where Traces.sacpz.units was not converted from java
+   % strings
+   %
    % 2012 June 8, r1.3.0
    % Changed Traces routine to match IRIS-WS v1.5's new conventions.
    %  - This change should be transparent to matlab users (except new
@@ -107,7 +111,7 @@ classdef irisFetch
    methods(Static)
       function v = version()
          % return the version number of irisFetch
-         v = '1.3.0';
+         v = '1.3.1';
       end
       
   
@@ -945,7 +949,7 @@ classdef irisFetch
                end
             end
             if ~isempty(jsacpz)
-               sacpz.units = traces(i).getSacpz().getInputUnit();
+               sacpz.units = char(traces(i).getSacpz().getInputUnit());
                sacpz.constant = traces(i).getSacpz().getConstant();
                sacpz.poles= irisFetch.jArrayList2complex(traces(i).getSacpz().getPoles());
                sacpz.zeros= irisFetch.jArrayList2complex(traces(i).getSacpz().getZeros());
