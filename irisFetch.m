@@ -66,6 +66,10 @@ classdef irisFetch
     % IRIS-DMC
     % February 2012
     
+    % 2012 Mar 8, Fixed problem where empty traces created a "data not
+    % assigned" style message. Removed java objects from the returned
+    % structures... these have already been parsed into fields.
+    %
     % 2012 Feb 29, Fixed date parsing issues, allowing accuracy to
     % millisecond level. Also fixed problem where filter numerators not
     % showing up properly.
@@ -85,7 +89,7 @@ classdef irisFetch
     
     methods(Static)
         function v = version()
-            v = '1.1.2';
+            v = '1.1.3';
         end
         
         function ts = Traces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity )
@@ -354,7 +358,7 @@ classdef irisFetch
             
             
             serviceManager = ws.service.ServiceUtil.getInstance();
-            serviceManager.setAppName('irisFetchStations');
+            serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
             if exist('baseURL','var')
                 varargin(indexOffsetOfBASEURL-1:indexOffsetOfBASEURL) = [];
                 service = serviceManager.getStationService(baseURL);
@@ -377,7 +381,17 @@ classdef irisFetch
             
             criteria = irisFetch.setCriteria(criteria, varargin);
             
-            j_networks = service.fetch(criteria, outputLevel);
+            try
+                j_networks = service.fetch(criteria, outputLevel);
+            catch je
+                if strfind(je.message,'ServiceNotSupportedException')
+                    error('IRISFETCH:ServiceNotSupportedByLibrary',...
+                        'The IRIS-WS java library version doesn''t support the requested station service version');
+                else
+                    rethrow(je)
+                end
+            end
+                
             networkStructure = irisFetch.parseCollection(j_networks);
             
             if nargout == 2
@@ -447,7 +461,7 @@ classdef irisFetch
             import edu.iris.dmc.*
             
             serviceManager = ws.service.ServiceUtil.getInstance();
-            serviceManager.setAppName('irisFetchEvents');
+            serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
             
             
             indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
@@ -599,7 +613,6 @@ classdef irisFetch
                         networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels = [networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels.Epochs];
                         % now, the structure is
                         % net -> sta -> epoch -> chan
-                        networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels = rmfield(networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels,{'SensorChannelEpoch', 'SensorClass', 'SensitivityClass'});
                     end %eachStationEpoch
                     % fold the structure back even further...
                     % net -> sta -> chan
@@ -625,8 +638,17 @@ classdef irisFetch
             %  mts = convertTraces(traces) where TRACES a java trace
             %  class.
             
-            
+            blankTrace = struct('network','','station','','location',''...
+                ,'channel','','quality','',...
+                'latitude',0,'longitude',0,'elevation',0,'depth',0,...
+                'azimuth',0,'dip',0,...
+                'sensitivity',0,'sensitivityFrequency',0,...
+                'instrument','','sensitivityUnits','UNK',...
+                'data',[],'sampleCount',0,'sampleRate',nan,...
+                'startTime',0,'endTime',0);
+            mts=blankTrace;
             for i = 1:length(traces)
+                mt=blankTrace;
                 mt.network = char(traces(i).getNetwork());
                 mt.station = char(traces(i).getStation());
                 mt.location = char(traces(i).getLocation());
@@ -670,12 +692,6 @@ classdef irisFetch
             % TRUNCATES TO Milliseconds
             javadate = java.util.Date;
             javadate.setTime((datenum(matlabdate) - datenum(1970,1,1,0,0,0)) * 86400 * 1000);
-%             days_since_1970 = matlabdate - datenum(1970,1,1,0,0,0);
-%             javadate = java.util.Date.setTime(matlabdate - datenum(1970,1,1,0,0,0) * 1000)
-%             sdf = java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss.SSS');
-%             sdf.setTimeZone(java.util.TimeZone.getTimeZone('UTC'));
-%             matlabDateString = datestr(matlabdate,'yyyy-mm-dd HH:MM:SS.FFF');
-%             javadate = sdf.parse(matlabDateString);
          end
         
         function matlabdate = jdate2mdate(javadate)
@@ -801,7 +817,16 @@ classdef irisFetch
                     if strcmpi(thisMethod,'getAny')
                         continue
                     end
-                    objectInField = thisObj.(thisMethod);
+                    
+                    %will this work or not? we don't know
+                    % try
+                        objectInField = thisObj.(thisMethod);
+                    % catch er
+                    %    disp(er)
+                    %    warning(er.message)
+                    %    disp('Ignoring, and continuing on')
+                    %    continue
+                    %end
                     
                     thisClass = class(objectInField);
                     switch thisClass
@@ -838,6 +863,21 @@ classdef irisFetch
                             end
                     end
                     
+                end
+            end
+            % we've made it through, now clean up. Two things to deal with:
+            %   1) Get rid of java objects in the structure.  Everything
+            %      that exists as a java object should already be parsed
+            %      into fields.
+            %   2) Clear the original object.  Let the trash collecter have
+            %   it.s
+            if itemCount > 0 && isstruct(myStruct)
+                allFields=fieldnames(myStruct);
+                for fn=1:numel(allFields)
+                    if isjava(myStruct(1).(allFields{fn})),
+                        myStruct = rmfield(myStruct, allFields{fn});
+                        % disp(['removed: ', allFields{n}]);
+                    end
                 end
             end
             obj.clear;
