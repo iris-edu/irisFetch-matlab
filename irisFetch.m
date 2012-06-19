@@ -66,11 +66,14 @@ classdef irisFetch
     % IRIS-DMC
     % February 2012
     
+    % 2012 Feb 27, fixed problem where channel epochs were missing from
+    % flattened stations, and added ability to translate into both Long and
+    % Integer java types.
     
-    % 2002 Feb 13, added SampleRate to trace structure, improved error
+    % 2012 Feb 13, added SampleRate to trace structure, improved error
     % catching.
     
-    % 2002 Feb 9, minor documentation update
+    % 2012 Feb 9, minor documentation update
     
     
     properties
@@ -78,7 +81,7 @@ classdef irisFetch
     
     methods(Static)
         function v = version()
-            v = '1.1.0';
+            v = '1.1.1';
         end
         
         function ts = Traces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity )
@@ -460,13 +463,13 @@ classdef irisFetch
             
             criteria = ws.criteria.EventCriteria;
             criteria = irisFetch.setCriteria(criteria, varargin);
+            if nargout == 2
+                urlParams = criteria.toUrlParams
+            end
             disp('fetching from IRIS-DMC')
             j_events = service.fetch(criteria);
             disp('parsing into MATLAB structures')
             events = irisFetch.parseCollection(j_events);
-            if nargout == 2
-                urlParams = criteria.toUrlParams;
-            end
         end
         
         
@@ -589,7 +592,7 @@ classdef irisFetch
                             [theseEpochs.Site] = deal(stationSites{eachStationEpoch});
                             networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels(eachChannel).Epochs = theseEpochs;
                         end %eachChannel
-                        networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels = networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels.Epochs;
+                        networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels = [networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels.Epochs];
                         % now, the structure is
                         % net -> sta -> epoch -> chan
                         networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels = rmfield(networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels,{'SensorChannelEpoch', 'SensorClass', 'SensitivityClass'});
@@ -660,19 +663,20 @@ classdef irisFetch
         %----------------------------------------------------------------
         function javadate = mdate2jdate(matlabdate)
             %mdate2jdate converts a matlab date to a java Date class
-            sdf = java.text.SimpleDateFormat('yyyy-MM-dd hh:mm:ss.SSS');
-            sdf.setTimeZone(java.util.TimeZone.getTimeZone('GMT'));
+            sdf = java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss.SSS');
+            sdf.setTimeZone(java.util.TimeZone.getTimeZone('UTC'));
             matlabDateString = datestr(matlabdate,'yyyy-mm-dd HH:MM:SS.FFF');
             javadate = sdf.parse(matlabDateString);
         end
         
         function matlabdate = jdate2mdate(javadate)
-            %jdate2mdate converts a java Date class to a matlab datenum
+            % jdate2mdate converts a java Date class to a matlab datenum
             % WARNING: NO MILLISECONDS!!!!
             try
-                matlabdate = datenum(...
-                    javadate.getYear+1900,javadate.getMonth+1,javadate.getDate,...
-                    javadate.getHours,javadate.getMinutes,javadate.getSeconds);
+                matlabdate = datenum(javadate.toGMTString);
+                %...
+                %    javadate.getYear+1900,javadate.getMonth+1,javadate.getDate,...
+                %    javadate.getHours,javadate.getMinutes,javadate.getSeconds);
                 matlabdate=datestr(matlabdate,31);
             catch je
                 matlabdate = [];
@@ -923,9 +927,15 @@ classdef irisFetch
                         
                         case 'java.util.Date'
                             criteria.(setMethod)(irisFetch.mdate2jdate(thisValue));
-                            
+                            criteria.toUrlParams
                         case 'java.lang.Double'
                             criteria.(setMethod)(java.lang.Double(thisValue));
+                            
+                        case 'java.lang.Long'
+                            criteria.(setMethod)(java.lang.Long(thisValue));
+                            
+                        case 'java.lang.Integer'
+                            criteria.(setMethod)(java.lang.Integer(thisValue));
                             
                         otherwise
                             disp('Unanticipated argument type... trying');
