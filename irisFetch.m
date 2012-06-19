@@ -14,7 +14,7 @@ classdef irisFetch
     %
     %    Example:
     %      tr = IRISFETCH.Traces('IU','ANMO','10','BHZ',...
-    %           '2010-05-10 03:00:00','2010-05-10 03:04:00')
+    %           '2010-02-27 06:30:00','2010-02-27 10:30:00')
     %
     %
     %  IRISFETCH.Stations() retrieves station metadata from the IRIS-DMC.
@@ -24,6 +24,8 @@ classdef irisFetch
     %
     %    Example:
     %      s = IRISFETCH.Stations('channel','*','ANMO','10','BH?')
+    %      % the above returns a tree-like structure, now make it more manageable
+    %      s = IRISFETCH.flattenToChannel(s); % convert a 1xN array of channel epochs.     
     %
     %
     %  IRISFETCH.Events() retrieves event metadata from the IRIS-DMC
@@ -64,12 +66,19 @@ classdef irisFetch
     % IRIS-DMC
     % February 2012
     
+    
+    % 2002 Feb 13, added SampleRate to trace structure, improved error
+    % catching.
+    
+    % 2002 Feb 9, minor documentation update
+    
+    
     properties
     end %properties
     
     methods(Static)
         function v = version()
-            v = '1.0.0';
+            v = '1.1.0';
         end
         
         function ts = Traces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity )
@@ -82,6 +91,9 @@ classdef irisFetch
             % stored as structures containing typical SAC-equivalent
             % metadata.
             %
+            % startDate and endDate must be formatted thusly:
+            %      'YYYY-MM-DD hh:mm:ss' or 'YYYY-MM-DD hh:mm:ss.sss'
+            %
             % network, station, location, and channel all accept '*' and
             % '?' wildcards, as well as comma separated lists.
             %
@@ -90,30 +102,64 @@ classdef irisFetch
             % If not specified, quality defaults to 'B'
             %
             %
-            %NOTICE:
-            %  startDate and endDate must be formatted thusly:
-            %      'YYYY-MM-DD hh:mm:ss'
-            %      'YYYY-MM-DD hh:mm:ss.sss'
-            %
             %EXAMPLES:
             %
             %    Example 1:
             %      % get 3 components for a 4-minute time period,
             %      % using the '?' wildcard.
             %      ts = irisFetch.Traces('IU','ANMO','10','BH?',...
-            %           '2010-05-10 03:00:00','2010-05-10 03:04:00')
+            %           '2010-02-27 06:30:00','2010-02-27 10:30:00')
             %
             %    Example 2:
-            %      % get z-channels for a comma-separated list of locations
+            %      % get z-channels for a comma-separated list of stations
             %      % while specifying a quality of 'B'
-            %      ts = irisFetch.Traces('IU','ANMO','00,10','BHZ',...
-            %           '2010-05-10 03:00:00','2010-05-10 03:04:00', 'B')
+            %      ts = irisFetch.Traces('IU','ANMO,ANTO,YSS','00','BHZ',...
+            %           '2010-02-27 06:30:00','2010-02-27 10:30:00', 'B')
             %
             %    Example 3:
             %      % get z-data for all BHZ stations that belong to the IU
             %      % network and have a location code of '00'
             %      ts = irisFetch.Traces('IU','*','00','BHZ',...
-            %           '2010-05-10 03:00:00','2010-05-10 03:04:00')
+            %           '2010-02-27 06:30:00','2010-02-27 10:30:00')
+            %
+            %ABOUT THE RETURNED TRACE
+            %  The returned trace(s) will be an array of structures, with
+            %  each structure containing fields full of information. For
+            %  example, if I retrieve N traces, I will have the following
+            %  structure: 
+            %
+            %  1xN struct array with fields:
+            %     network
+            %     station
+            %     location
+            %     channel
+            %     quality
+            %     latitude
+            %     longitude
+            %     elevation
+            %     depth
+            %     azimuth
+            %     dip
+            %     sensitivity
+            %     sensitivityFrequency 
+            %     instrument
+            %     sensitivityUnits 
+            %     data  
+            %     sampleCount 
+            %     sampleRate
+            %     startTime 
+            %     endTime 
+            %
+            %   COMMON MANIPULATIONS
+            %     To access the date as text, use datestr().  For trace(s)
+            %     ts the full date with milliseconds can be seen using:
+            %     datestr(ts, ,'YYYY-MM-DD hh:mm:ss.FFF')
+            % 
+            %     To scale the data, divide each trace's data by its
+            %     sensitivity.  The resulting values are in
+            %     sensitivityUnits.
+            % 
+            % SEE ALSO datestr
             
             if ~exist('verbosity', 'var')
                 verbosity = false;
@@ -128,29 +174,42 @@ classdef irisFetch
                 ts = irisFetch.convertTraces(traces);
                 clear traces;
             catch je
-                if strcmp(je.identifier, 'MATLAB:undefinedVarOrClass')
-                    errtext=['The Web Services library does not appear to be in the javaclasspath.\n',...
-                        'Please download the latest version from \n',...
-                        'http://www.iris.edu/manuals/javawslibrary/download/IRIS-WS-latest.jar\n ',...
-                        'and then add it to your classpath. \n'];
-                    warning('IRISFETCH:NoIrisWSJarInstalled',errtext);
-                    isSilent = true; %suppress messages within the connectTo...
-                    success = irisFetch.connectTo_IRIS_WS_jar(isSilent);
-                    if success
-                        disp('irisFetch.connectTo_IRIS_WS_jar() has was able to connect you to the appropriate java library. Continuing...');
-                        try
-                            traces = edu.iris.dmc.ws.extensions.fetch.TraceData.fetchTraces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity);
-                            ts = irisFetch.convertTraces(traces);
-                            clear traces;
-                        catch je2
-                            rethrow(je2)
+                switch je.identifier
+                    case 'MATLAB:undefinedVarOrClass'
+                        %if strcmp(je.identifier, 'MATLAB:undefinedVarOrClass')
+                        errtext=['The Web Services library does not appear to be in the javaclasspath.\n',...
+                            'Please download the latest version from \n',...
+                            'http://www.iris.edu/manuals/javawslibrary/download/IRIS-WS-latest.jar\n ',...
+                            'and then add it to your classpath. \n'];
+                        warning('IRISFETCH:NoIrisWSJarInstalled',errtext);
+                        isSilent = true; %suppress messages within the connectTo...
+                        success = irisFetch.connectTo_IRIS_WS_jar(isSilent);
+                        if success
+                            disp('irisFetch.connectTo_IRIS_WS_jar() has was able to connect you to the appropriate java library. Continuing...');
+                            try
+                                traces = edu.iris.dmc.ws.extensions.fetch.TraceData.fetchTraces(network, station, location, channel, startDateStr, endDateStr, quality, verbosity);
+                                ts = irisFetch.convertTraces(traces);
+                                clear traces;
+                            catch je2
+                                rethrow(je2)
+                            end
+                        else
+                            error('IRISFETCH:Traces:UnableToInstallIrisWSJar',...
+                                'irisFetch was unable to recover, Please download and add the latest IRIS-WS-JAR to your javaclasspath');
                         end
-                    else
-                        error('IRISFETCH:Traces:UnableToInstallIrisWSJar',...
-                            'irisFetch was unable to recover, Please download and add the latest IRIS-WS-JAR to your javaclasspath');
-                    end
-                else
-                    fprintf('Exception occured in IRIS Web Services Library: %s\n', je.message);
+                    case 'MATLAB:Java:GenericException'
+                        if any(strfind(je.message,'URLNotFoundException'))
+                            % we got a 404 from somewhere. (based on ice.net)
+                            error('IRISFETCH:Trace:URLNotFoundException',...
+                                'Trace found no requested data. Instead, it ran in to the following error:\n%s',...
+                                je.message);
+                        else
+                            rethrow(je)
+                        end
+                    otherwise
+                        fprintf('Exception occured in IRIS Web Services Library: %s\n', je.message);
+                        rethrow(je)
+                        
                 end
             end
         end
@@ -263,23 +322,32 @@ classdef irisFetch
             
             try
                 outputLevel = ws.criteria.OutputLevel.(upper(detailLevel));
-            catch
-                error('IRISFETCH:invalidOutputLevel',...
-                    'The selected outputLevel [''%s''] was not recognized.',...
-                    upper(detailLevel));
+            catch je
+                switch je.identifier
+                    case 'MATLAB:undefinedVarOrClass'
+                        error('IRISFETCH:NoIrisWSJarInstalled',...
+                            'The necessary IRIS-WS java library was not recognized or found. Please ensure it is on your javaclasspath');
+                    case 'MATLAB:subscripting:classHasNoPropertyOrMethod'
+                        error('IRISFETCH:invalidOutputLevel',...
+                            'The selected outputLevel [''%s''] was not recognized.',...
+                            upper(detailLevel));
+                    otherwise
+                        rethrow(je);
+                end
             end
             
             
             indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
             try
                 baseURL = varargin{indexOffsetOfBASEURL}
-            catch
+            catch 
+                % don't do anything
             end
             
             
             
             serviceManager = ws.service.ServiceUtil.getInstance();
-            serviceManager.setAppName('MATLAB/irisFetch');
+            serviceManager.setAppName('irisFetchStations');
             if exist('baseURL','var')
                 varargin(indexOffsetOfBASEURL-1:indexOffsetOfBASEURL) = [];
                 service = serviceManager.getStationService(baseURL);
@@ -372,7 +440,7 @@ classdef irisFetch
             import edu.iris.dmc.*
             
             serviceManager = ws.service.ServiceUtil.getInstance();
-            serviceManager.setAppName('MATLAB/irisFetch');
+            serviceManager.setAppName('irisFetchEvents');
             
             
             indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
@@ -380,6 +448,7 @@ classdef irisFetch
             try
                 baseURL = varargin{indexOffsetOfBASEURL}
             catch
+                % don't do anything
             end
             
             if exist('baseURL','var')
@@ -573,6 +642,7 @@ classdef irisFetch
                 mt.data = traces(i).getData();
                 
                 mt.sampleCount = traces(i).getSampleCount();
+                mt.sampleRate = traces(i).getSampleRate();
                 
                 startDateString = char(traces(i).getStartTime().toString());
                 endDateString = char(traces(i).getEndTime().toString());
@@ -604,7 +674,7 @@ classdef irisFetch
                     javadate.getYear+1900,javadate.getMonth+1,javadate.getDate,...
                     javadate.getHours,javadate.getMinutes,javadate.getSeconds);
                 matlabdate=datestr(matlabdate,31);
-            catch
+            catch je
                 matlabdate = [];
             end
         end
@@ -892,4 +962,3 @@ classdef irisFetch
         end
     end %static protected methods
 end
-
