@@ -67,6 +67,9 @@ classdef irisFetch
    % IRIS-DMC
    % February 2012
    
+   % 2012 June 18 r1.3.2
+   % spelling fix in parse, and initialized  
+   %
    % 2012 June 14 r1.3.1
    % Fixed problem where Traces.sacpz.units was not converted from java
    % strings
@@ -111,7 +114,7 @@ classdef irisFetch
    methods(Static)
       function v = version()
          % return the version number of irisFetch
-         v = '1.3.1';
+         v = '1.3.2';
       end
       
   
@@ -1113,7 +1116,7 @@ classdef irisFetch
       function myStruct = parseObjectViaGetMethods(thisObj)
          % This routine should only be called for objects. Not for arrays
          % NOTE: assumes a single/scalar object.
-         
+         myStruct=[];
          [getterList, fieldnameList] = irisFetch.getMethodsAndFields(thisObj);
          
          for idx = 1 : numel(getterList)
@@ -1181,7 +1184,7 @@ classdef irisFetch
                                  try
                                     myGuts(n) = mG;
                                  catch er
-                                    if strcmp(er.identifier, 'MATLAB:heterogeneousStrucAssignment')
+                                    if strcmp(er.identifier, 'MATLAB:heterogenousStrucAssignment')
                                        f = fieldnames(mG);
                                        for z=1:numel(f)
                                           myGuts(n).(f{z}) = mG.(f{z});
@@ -1381,3 +1384,4 @@ classdef irisFetch
    
    end %static protected methods
 end
+
