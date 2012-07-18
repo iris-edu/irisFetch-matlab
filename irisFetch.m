@@ -114,7 +114,7 @@ classdef irisFetch
    methods(Static)
       function v = version()
          % return the version number of irisFetch
-         v = '1.3.2';
+         v = '1.3.3';
       end
       
   
@@ -1184,7 +1184,7 @@ classdef irisFetch
                                  try
                                     myGuts(n) = mG;
                                  catch er
-                                    if strcmp(er.identifier, 'MATLAB:heterogenousStrucAssignment')
+                                    if strcmp(er.identifier, 'MATLAB:heterogeneousStrucAssignment')
                                        f = fieldnames(mG);
                                        for z=1:numel(f)
                                           myGuts(n).(f{z}) = mG.(f{z});
