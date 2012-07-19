@@ -67,6 +67,11 @@ classdef irisFetch
    % IRIS-DMC
    % February 2012
    
+   % 2012 July 19 r1.3.4
+   % Fixed error for Stations with responses that have different types of
+   % responses.  Depending upon the version, matlab throws out two
+   % different (but similar) error ids.
+   %
    % 2012 June 18 r1.3.2
    % spelling fix in parse, and initialized  
    %
@@ -114,7 +119,7 @@ classdef irisFetch
    methods(Static)
       function v = version()
          % return the version number of irisFetch
-         v = '1.3.3';
+         v = '1.3.4';
       end
       
   
@@ -1184,17 +1189,20 @@ classdef irisFetch
                                  try
                                     myGuts(n) = mG;
                                  catch er
-                                    if strcmp(er.identifier, 'MATLAB:heterogeneousStrucAssignment')
-                                       f = fieldnames(mG);
-                                       for z=1:numel(f)
-                                          myGuts(n).(f{z}) = mG.(f{z});
-                                       end
-                                    else
-                                       rethrow (er)
-                                    end
-                                 end
+                                    % differing versions of matlab have
+                                    % different spellings of this error.
+                                    switch er.identifier
+                                       case {'MATLAB:heterogeneousStrucAssignment', 'MATLAB:heterogenousStrucAssignment'}
+                                          f = fieldnames(mG);
+                                          for z=1:numel(f)
+                                             myGuts(n).(f{z}) = mG.(f{z});
+                                          end
+                                       otherwise
+                                          rethrow (er)                                          
+                                    end %switch
+                                 end %try/catch
                                  
-                              end
+                              end %obj loop
                         end
                      end %endif obj is empty
                      
