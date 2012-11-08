@@ -63,12 +63,16 @@ classdef irisFetch
    %IRISFETCH.FLATTENTOCHANNEL IRISFETCH.FLATTENTOSTATION
    %IRISFETCH.TESTCOMPATIBILITY IRISFETCH.VERSION JAVAADDPATH
    
+   
    % Celso Reyes, Rich Karstens
    % IRIS-DMC
    % February 2012
    
-   % 2012 Oct 11, r1.3.6
-   % Fixed an occasional rounding error at the ms level. 
+   % 2012 Nov 7, r1.3.6
+   % Fixed an occasional rounding error at the ms level.
+   % Duplicated PreferredMagnitude and PreferredOrigin information into the main level of
+   % the structure returned by Events.  This should make dealing with the data much
+   % easier.
    %
    % 2012 Sept 26 r1.3.5
    % Refractored to make irisFetch easier to read
@@ -752,10 +756,37 @@ classdef irisFetch
          end
          disp('fetching from IRIS-DMC')
          j_events = service.fetch(criteria);
+         fprintf('\n\n%d events found *************\n\n',j_events.size);
          disp('parsing into MATLAB structures')
          %tic;events = irisFetch.parseCollection(j_events);toc
          %disp(events)
-         events = irisFetch.parse(j_events);
+         for n=size(j_events):-1:1
+            %tic;
+            %fprintf('parsing event %d :   ', n);
+            thisEvent = irisFetch.parse(j_events.get(n-1));
+            if numel(thisEvent.PreferredMagnitude)
+                          thisEvent.PrimaryMagnitudeType=thisEvent.PreferredMagnitude.Type;
+            thisEvent.PrimaryMagnitudeValue=thisEvent.PreferredMagnitude.Value;
+            else
+               thisEvent.PrimaryMagnitudeType='';
+               thisEvent.PrimaryMagnitudeValue=nan;
+            end
+            if numel(thisEvent.PreferredOrigin)
+               thisEvent.PrimaryLatitude=thisEvent.PreferredOrigin.Latitude;
+               thisEvent.PrimaryLongitude=thisEvent.PreferredOrigin.Longitude;
+               thisEvent.PrimaryDepth=thisEvent.PreferredOrigin.Depth;
+               thisEvent.PrimaryTime=thisEvent.PreferredOrigin.Time;
+            else
+               thisEvent.PrimaryLatitude=nan;
+               thisEvent.PrimaryLongitude=nan;
+               thisEvent.PrimaryDepth=nan;
+               thisEvent.PrimaryTime='0000-00-00 00:00:00.000';
+            end
+               
+            events(n) = thisEvent;
+            %disp(toc)
+         end
+         % events = irisFetch.parse(j_events);
       end
       
       
@@ -1111,14 +1142,15 @@ classdef irisFetch
          if ~isempty(endtime)
             criteria.setEndTime(irisFetch.mdate2jdate(endtime));
          end
-         urlparams = char(criteria.toUrlParams());
+         urlparams = criteria.toUrlParams().toCharArray()';
          
          serviceManager = edu.iris.dmc.ws.service.ServiceUtil.getInstance();
          baseUrl = 'http://www.iris.edu/ws/resp/';
          serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
          service = serviceManager.getRespService(baseUrl);
-         respstructures= service.fetch(criteria);
-         respstructures = char(respstructures);
+         %respstructures= service.fetch(criteria);
+         %respstructures = char(respstructures);
+         respstructures= service.fetch(criteria).toCharArray()';
          
          
       end
@@ -1187,7 +1219,8 @@ classdef irisFetch
             criteria.setEndTime(javadateTime);
             reconvertedMatlabTime = ...
                datestr(irisFetch.jdate2mdate(javadateTime),irisFetch.DATE_FORMATTER);
-            urlString = char(criteria.toUrlParams().get(0));
+            %urlString = char(criteria.toUrlParams().get(0));
+            urlString = criteria.toUrlParams().get(0).toCharArray()';
             if ~(all(reconvertedMatlabTime == matlabTimeString));
                disp(s-fix(s));
                if datenum(reconvertedMatlabTime) > datenum(t)
@@ -1197,7 +1230,7 @@ classdef irisFetch
                end
             fprintf('InputTime: %s  ; jDateTime: %s ; millis: %d\nReConvert: %s\nURL: %s\n',...
                matlabTimeString, ...
-               char(javadateTime.toGMTString), ...
+               javadateTime.toGMTString.toCharArray()', ...
                rem(javadateTime.getTime(),1000),...
                reconvertedMatlabTime,...               
                urlString);
@@ -1257,25 +1290,25 @@ classdef irisFetch
          mts=blankTrace;
          for i = 1:length(traces)
             mt=blankTrace;
-            mt.network = char(traces(i).getNetwork());
-            mt.station = char(traces(i).getStation());
+            mt.network  = char(traces(i).getNetwork());
+            mt.station  = char(traces(i).getStation());
             mt.location = char(traces(i).getLocation());
-            mt.channel = char(traces(i).getChannel());
+            mt.channel  = char(traces(i).getChannel());
             
-            mt.quality = char(traces(i).getQuality());
+            mt.quality  = char(traces(i).getQuality());
             
-            mt.latitude = traces(i).getLatitude();
+            mt.latitude  = traces(i).getLatitude();
             mt.longitude = traces(i).getLongitude();
             mt.elevation = traces(i).getElevation();
-            mt.depth = traces(i).getDepth();
-            mt.azimuth = traces(i).getAzimuth();
-            mt.dip = traces(i).getDip();
+            mt.depth     = traces(i).getDepth();
+            mt.azimuth   = traces(i).getAzimuth();
+            mt.dip       = traces(i).getDip();
             
             mt.sensitivity = traces(i).getSensitivity();
             mt.sensitivityFrequency = traces(i).getSensitivityFrequency();
             
-            mt.instrument = char(traces(i).getInstrument());
-            mt.sensitivityUnits = char(traces(i).getSensitivityUnits());
+            mt.instrument = traces(i).getInstrument().toCharArray()';
+            mt.sensitivityUnits = traces(i).getSensitivityUnits().toCharArray()';
             mt.data = traces(i).getData();
             
             mt.sampleCount = traces(i).getSampleCount();
@@ -1345,6 +1378,10 @@ classdef irisFetch
       end
       
       function matlabdate = jdate2mdate(javadate)
+         persistent formatter
+         if isempty(formatter)
+            formatter = java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss.SSS');
+         end
          % jdate2mdate converts a java Date class to a matlab datenum
          % NOTE: Matlab cannot provide nanosecond resolution, though it can come close...
          % by
@@ -1352,16 +1389,17 @@ classdef irisFetch
             matlabdate =  datenum([1970 1 1 0 0 (fix(javadate.getTime()/1000) + javadate.getNanos / 1000000000) ]);
             %matlab dates do not have nanosecond accuracy
          elseif isa(javadate,'java.util.Date') %millisecond precision
-            matlabdate= datenum([1970 1 1 0 0 (javadate.getTime()/1000)]);
+            matlabdate= formatter.format(javadate).toCharArray()'; % might need to transpose.
+            %matlabdate= datenum([1970 1 1 0 0 (javadate.getTime()/1000)]);
          % else 
          end
-         try
-            % matlabdate = irisFetch.BASE_DATENUM + (javadate.getTime()) / irisFetch.MS_IN_DAY;
-            matlabdate=datestr(matlabdate,irisFetch.DATE_FORMATTER);
-         catch je
-            warning(je)
-            matlabdate = [];
-         end
+%          try
+%             % matlabdate = irisFetch.BASE_DATENUM + (javadate.getTime()) / irisFetch.MS_IN_DAY;
+%             matlabdate=datestr(matlabdate,irisFetch.DATE_FORMATTER);
+%          catch je
+%             warning(je)
+%             matlabdate = [];
+%          end
       end
       
       %----------------------------------------------------------------
@@ -1517,15 +1555,17 @@ classdef irisFetch
          % then proceeding to the iris classes
          
          myClass = class(obj);
+         % disp(myClass); %DEBUG CODE!!!!!!
          firstbit = myClass(1:find(myClass == '.',1,'first')-1);
          %switch strtok(myClass,'.')
          switch firstbit
             case 'java' % deal with a built-in java class
                switch myClass
                   case {'java.lang.String'}
-                     myGuts = char(obj);
+                     %myGuts = char(obj);
+                     myGuts = obj.toCharArray()';
                   case 'java.lang.Class'
-                     myGuts = char(obj.getCanonicalName);
+                     myGuts = obj.getCanonicalName.toCharArray()';
                      
                   case {'java.lang.Double',...
                         'java.lang.Integer',...
@@ -1602,6 +1642,22 @@ classdef irisFetch
                      for idx = 1 : numel(getterList)
                         myGuts.(fieldnameList{idx}) = irisFetch.parse(obj.(getterList{idx}));
                      end
+                  case 'edu.iris.dmc.ws.event.model.Arrival'
+                     % in the hopes of speeding this up, tackle it directly
+                     % before adding this, a few days in feb 2010 minmag 5 takes a long
+                     % time.
+                     myGuts.Distance     = obj.getDistance.doubleValue();
+                     myGuts.TimeResidual = obj.getTimeResidual.doubleValue(); 
+                     % myGuts.Phase        = char(obj.getPhase);
+                     myGuts.Phase2        = obj.getPhase.toCharArray()';
+                     myGuts.Azimuth      = obj.getAzimuth.doubleValue();
+                     myGuts.Picks        = obj.getPicks;
+                     if myGuts.Picks.isEmpty()
+                        myGuts.Picks=[];
+                     else
+                        error('Not ready for this one yet')
+                     end
+                     myGuts.PublicId     = obj.getPublicId.toCharArray()';
                      
                   otherwise
                      myGuts = irisFetch.parseObjectViaGetMethods(obj);
@@ -1629,7 +1685,7 @@ classdef irisFetch
                   'java.lang.Long',...
                   'double'}
                myguts = double(obj.toArray(javaArray('java.lang.Double',obj.size())));
-               
+
             otherwise
                for n = obj.size:-1:1
                   myguts(n) = irisFetch.parse(obj.get(n-1));
