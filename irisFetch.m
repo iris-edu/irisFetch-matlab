@@ -126,7 +126,7 @@ classdef irisFetch
    
    
    properties (Constant = true)
-      VERSION = '1.3.5';
+      VERSION = '1.4.1';
       MS_IN_DAY = 86400000;
       DATE_FORMATTER = 'yyyy-mm-dd HH:MM:SS.FFF';
       BASE_DATENUM = 719529; % accounts for matlab's 0000-Jan-1 start date vs java's 1970-Jan-1 start
@@ -755,7 +755,16 @@ classdef irisFetch
             urlParams = criteria.toUrlParams;
          end
          disp('fetching from IRIS-DMC')
+         try
          j_events = service.fetch(criteria);
+         catch er
+            if strfind(er.message,'edu.iris.dmc.ws.service.NoDataFoundException')
+               warning('No data found')
+               events=[];
+               return
+            end
+            rethrow(er);
+         end
          fprintf('\n\n%d events found *************\n\n',j_events.size);
          disp('parsing into MATLAB structures')
          %tic;events = irisFetch.parseCollection(j_events);toc
