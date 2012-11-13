@@ -68,7 +68,9 @@ classdef irisFetch
    % IRIS-DMC
    % February 2012
    
-   % 2012 Nov 7, r1.3.6
+   % 2012 Nov 13, r1.4.1
+   % Fixed errors that might occur when a station or event query comes up empty
+   % 2012 Nov 7, r1.4.0
    % Fixed an occasional rounding error at the ms level.
    % Duplicated PreferredMagnitude and PreferredOrigin information into the main level of
    % the structure returned by Events.  This should make dealing with the data much
@@ -649,6 +651,10 @@ classdef irisFetch
                if strfind(je.message,'ServiceNotSupportedException')
                   error('IRISFETCH:ServiceNotSupportedByLibrary',...
                      'The IRIS-WS java library version doesn''t support the requested station service version');
+               elseif strfind(je.message,'NoDataFoundException')
+                  warning('IRISFETCH:NoDataFoundException','No data was found that matched your criteria');
+                  j_networks = [];
+                  return
                else
                   rethrow(je)
                end
@@ -758,10 +764,10 @@ classdef irisFetch
          try
          j_events = service.fetch(criteria);
          catch er
-            if strfind(er.message,'edu.iris.dmc.ws.service.NoDataFoundException')
-               warning('No data found')
-               events=[];
-               return
+            if strfind(er.message,'NoDataFoundException')
+                  warning('IRISFETCH:NoDataFoundException','No data was found that matched your criteria');
+                  events=[];
+                  return
             end
             rethrow(er);
          end
