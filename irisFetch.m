@@ -18,14 +18,13 @@ classdef irisFetch
    %    Resp - retrive RESP formatted response data from the irisws-resp service
    %    version - display the current version number
    %    connectToJar - attempt to connect to the required IRIS-WS JAR file
+   %    runExamples - displays and runs some sample queries to the web service.
    %
    %  irisFetch requires version 2.0 or greater of the IRIS Web Services Library java jar
    %  for more details, click on 'connectToJar' above.
    %
-   %  For additional guidance, A discussion about using MATLAB to access data from the
-   %  IRIS-DMC can be found at:
-   %
-   %  http://www.iris.edu/manuals/javawslibrary/matlab/
+   %  For additional guidance, type help <method>, use irisFetch.runExamples, or check out
+   %  the online manual.
    %
    %see also JAVAADDPATH
    
@@ -555,7 +554,7 @@ classdef irisFetch
          %  irisFetch requires version 2.0 or greater of the IRIS Web Services Library java jar,
          %  available from:
          %
-         %  http://www.iris.edu/manuals/javawslibrary/#download
+         %  http://www.iris.edu/files/IRIS-WS/2/
          %
          %  This jar file must be added to your MATLAB path, which may be done
          %  in a variety of ways.  One common way is to include a javaaddpath
