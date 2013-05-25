@@ -650,7 +650,6 @@ classdef irisFetch
             pause(delay);
          end
          clear traces tr n s c ev
-         clear(gcf)
          
          
          
@@ -1918,7 +1917,7 @@ classdef irisFetch
                if isempty(javadate.getFractionalSecond)
                   mySecond=javadate.getSecond;
                else
-                  mySecond=javadate.getSecond + javadate.getFractionalSecond;
+                  mySecond=javadate.getSecond + double(javadate.getFractionalSecond);
                end
                matlabdate= datenummx(...
                   javadate.getYear, javadate.getMonth,  javadate.getDay, ...
