@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.0';  % irisFetch version number
+      VERSION           = '2.0.0a';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -255,47 +255,50 @@ classdef irisFetch
       
       function [channelStructure, urlParams] = Channels(varargin)
          %irisFetch.Channels retrieves station metadata from IRIS-DMC as an array of channels
+         %  s = irisFetch.Channels(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
+         %  station metadata from the IRIS-DMC into an array of channels.  DETAIL is one
+         %  of 'CHANNEL', or 'RESPONSE' and must be explicitly declared. Network, station,
+         %  location, and channel parameters are passed directly to the java library, so
+         %  both comma-separated  lists and wildcards (? and *) are accepted.  
+         %  
+         %  All five parameters are required for all queries, but may be wildcarded by
+         %  using '' for their values.
          %
-         %  To retrieve channel-level BHZ metadata from any station named ANMO,
-         %      s = irisFetch.Stations('channel','*','ANMO','*','BHZ')
-         %      s = irisFetch.flattenToChannel(s); % convert a more managable 1xN array of channel epochs.
+         %  [s, myParams] = irisFetch.Channels( ... ) also returns the URL parameters that
+         %  were used to make the query.
          %
-         %SEE ALSO Networks, Stations
+         %  irisFetch.Channels(..., 'BASEURL',alternateURL) specifies an alternate base URL
+         %  to query. By default queries go to: http://service.iris.edu/fdsnws/station/1/
+         %
+         %  s = irisFetch.Channels( ... , paramName, value [, ...]]) allows any number of
+         %  parameter-value pairs to be included in the selection criteria.  Valid
+         %  parameter names are listed in help for irisFetch.Networks
+         %
+         %  Example: to retrieve channel-level BHZ metadata from any station named ANMO:
+         %      s = irisFetch.Channels('channel','*','ANMO','*','BHZ')
+         %
+         %  Note: This function effectively deprecates irisFetch.flattenToChannel
+         %
+         %See also Networks, Stations
          
          assert(ismember(upper(varargin(1)),{'CHANNEL','RESPONSE'}),...
             'To retrieve channels, the detailLevel must be either ''CHANNEL'' or ''RESPONSE''');
          [channelStructure, urlParams] = irisFetch.Networks(varargin{:});
-         channelStructure = irisFetch.flattenToChannel(channelStructure);
+         if ~isempty(channelStructure)
+            channelStructure = irisFetch.flattenToChannel(channelStructure);
+         end
       end
       
       function [stationStructure, urlParams] = Stations(varargin)
          %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of stations
-         %  stations = irisFetch.Stations(detailLevel, network, station, location, channel)
-         %  [stations, urlParams] = irisFetch.Stations(...) returns the URL parameter
-         %  pairings that were sent to the service
-         %  [..] = irisFetch.Stations(...,param1, val1 [...,paramN, valN])
-         %
-         %
-         %  irisFetch.Stations() retrieves station metadata from the IRIS-DMC.
-         %  This data may be retrieved at a variety of detail levels. From
-         %  broadest to most specific, these are STATION, CHANNEL, and
-         %  RESPONSE.
-         %
-         %SEE ALSO Networks, Channels
-         assert(ismember(upper(varargin(1)),{'STATION','CHANNEL','RESPONSE'}),...
-            'To retrieve stations, the detailLevel must be either ''STATION'', ''CHANNEL'', or ''RESPONSE''');
-         [networkStructure, urlParams] = irisFetch.Networks(varargin{:});
-         stationStructure = irisFetch.flattenToStation(networkStructure);
-      end
-      
-      function [networkStructure, urlParams] = Networks(detailLevel, network, station, location, channel, varargin)
-         %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of networks
-         %  s = irisFetch.Stations(DETAIL,NETWORK,STATION,LOCATION,CHANNEL), where detail
-         %  is one of 'NETWORK','STATION','CHANNEL', or 'RESPONSE' and must be explicitly
-         %  declared. These other parameters are also required for all queries, but may be
-         %  wildcarded by using '' for their values. Network, station, location, and
-         %  channel parameters are passed directly to the java library, so both comma-separated
-         %  lists and wildcards (? and *) are accepted.
+         %  s = irisFetch.Stations(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
+         %  station metadata from the IRIS-DMC into an array of stations.  DETAIL is one
+         %  of 'STATION','CHANNEL', or  'RESPONSE' and must be explicitly declared.
+         %  Network, station, location, and channel parameters are passed directly to the
+         %  java library, so both comma-separated lists and wildcards (? and *) are accepted.
+         %  
+         %  All five parameters are required for all queries, but may be wildcarded by
+         %  using '' for their values.
          %
          %  [s, myParams] = irisFetch.Stations( ... ) also returns the URL parameters that
          %  were used to make the query.
@@ -304,6 +307,41 @@ classdef irisFetch
          %  to query. By default queries go to: http://service.iris.edu/fdsnws/station/1/
          %
          %  s = irisFetch.Stations( ... , paramName, value [, ...]]) allows any number of
+         %  parameter-value pairs to be included in the selection criteria.  Valid
+         %  parameter names are listed in help for irisFetch.Networks
+         %
+         %  Example: to retrieve channel-level metadata, stored in an array of stations:
+         %      s = irisFetch.Stations('channel','IU','A*','*','BHZ')
+         %
+         %  Note: This function effectively deprecates the irisFetch.flattenToStation
+         %
+         %See also Networks, Channels
+         
+         assert(ismember(upper(varargin(1)),{'STATION','CHANNEL','RESPONSE'}),...
+            'To retrieve stations, the detailLevel must be either ''STATION'', ''CHANNEL'', or ''RESPONSE''');
+         [stationStructure, urlParams] = irisFetch.Networks(varargin{:});
+         if ~isempty(stationStructure)
+            stationStructure = irisFetch.flattenToStation(stationStructure);
+         end
+      end
+      
+      function [networkStructure, urlParams] = Networks(detailLevel, network, station, location, channel, varargin)
+         %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of networks
+         %  s = irisFetch.Networks(DETAIL,NETWORK,STATION,LOCATION,CHANNEL), retrieves
+         %  station metadata into an array of networks. These parameters are required for
+         %  all queries, but may be wildcarded by using '' for their values. Network,
+         %  station, location, and channel parameters are passed directly to the java
+         %  library, so both comma-separated lists and wildcards (? and *) are accepted.
+         %  Detail is one of 'NETWORK','STATION','CHANNEL', or 'RESPONSE' and must be  
+         %  explicitly declared. 
+         %
+         %  [s, myParams] = irisFetch.Networks( ... ) also returns the URL parameters that
+         %  were used to make the query.
+         %
+         %  irisFetch.Networks(..., 'BASEURL',alternateURL) specifies an alternate base URL
+         %  to query. By default queries go to: http://service.iris.edu/fdsnws/station/1/
+         %
+         %  s = irisFetch.Networks( ... , paramName, value [, ...]]) allows any number of
          %  parameter-value pairs to be included in the selection criteria.  See the list
          %  below.
          %
@@ -332,6 +370,8 @@ classdef irisFetch
          %                           [Lat, Lon, MaxRadius, MinRadius]
          %                           % MinRadius is optional
          %
+         %  To retrieve similar information, but organize as an array of either channels
+         %  or stations, use irisFetch.Channels or irisFetch.Stations respectively.
          %
          %SEE ALSO Channels, Stations
          import edu.iris.dmc.*
@@ -532,7 +572,7 @@ classdef irisFetch
          try
             j_events = service.fetch(crit);
          catch er
-            if strfind(er.message,'NoDataFoundException')
+            if any(strfind(er.message,'NoDataFoundException')) || any(strfind(er.message,'No Content'))
                warning('IRISFETCH:NoDataFoundException','No data was found that matched your criteria');
                events=[];
                return
