@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.0a';  % irisFetch version number
+      VERSION           = '2.0.0b';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -226,6 +226,7 @@ classdef irisFetch
          
          function getTheTraces()
             try
+               tracedata.setWAVEFORM_URL('http://ws.resif.fr/dataselect/1/')
                if authorize
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
                      startDateStr, endDateStr, quality, getsacpz, username, userpwd);
@@ -417,7 +418,8 @@ classdef irisFetch
                switch je.identifier
                   case 'MATLAB:undefinedVarOrClass'
                      error('IRISFETCH:NoIrisWSJarInstalled',...
-                        'The necessary IRIS-WS java library was not recognized or found. Please ensure it is on your javaclasspath');
+                        ['The necessary IRIS-WS java library was not recognized or found. ',...
+                        'Please ensure it is on your javaclasspath']);
                   case 'MATLAB:subscripting:classHasNoPropertyOrMethod'
                      error('IRISFETCH:invalidOutputLevel',...
                         'The selected outputLevel [''%s''] was not recognized.',...
@@ -448,7 +450,7 @@ classdef irisFetch
          end %connectToStationService()
          
          function removeParameter(s)
-            [~, idx] = getParameter(s);
+            [UNUSED_VARIABLE, idx] = getParameter(s); %#ok<ASGLU>
             varargin(idx * 2 -1 : idx* 2) = [];
          end
          
@@ -691,185 +693,86 @@ classdef irisFetch
          end
          clear traces tr n s c ev
          
-         
-         
       end %fn runExamples
    end % static methods
    
    methods(Static, Hidden=true)
+      
       function channelList = flattenToChannel(networkTree)
-         %irisFetch.flattenToChannel flattens the structure returned by irisFetch.Stations
+         %irisFetch.flattenToChannel flattens the structure returned by irisFetch.Networks
          %  flatStruct = irisFetch.flattenToChannel(networkTree) takes the hierarchy
-         %  returned by irisFetch.Stations, and returns a 1xN array of channels  (channel
+         %  returned by irisFetch.Networks, and returns a 1xN array of channels  (channel
          %  epochs, technically).
-         %
-         %  networkTree is a nested structure of the following format
-         %    network.Station.Epoch.Channel.Epoch.[etc]
-         %
-         %  flatStruct is an array containing ALL channel epochs, along
-         %  with unique identifying information from the parent levels,
-         %  such as networkTree.code, networkTree.station.code, etc.
-         %
-         % Examples:
-         %
-         % To retrieve all BHZ channels from network IU:
-         %    myChannels = channelList({strcmp(channelList.NetworkCode},'IU') & ...
-         %                   strcmp(channelList.ChannelCode, 'BHZ')
-         %
-         % To Find out how many stations were retrieved from the IU network
-         %    sum(strcmp({channelList.NetworkCode},'IU'))
-         
-         
-         % moving from:  network -> station -> station epoch ->
-         % channel -> channel epoch -> etc.
-         
-         % moving to: flat channels
-         
-         % hard-coded.
-         %first, loop through and get rid of excess fields
-         
-         ALPHABETIZE = false; %leave fields in alphabetical order, or reorder according to common-sense
-         
+         % 
+         %  flatStruct is an array containing ALL channel epochs.
+                           
          assert(isa(networkTree,'struct'),'Cannot Flatten a non-structure');
          
-         % shared itterators
-         eachStation = [];
-         eachNetwork = [];
+         %eliminate stations that have no channels
+         for n=1:numel(networkTree)
+            hasNoChannel = arrayfun(@(x) isempty(x.Channels),networkTree(n).Stations);
+            networkTree(n).Stations(hasNoChannel) = []; % networkTree(n).Stations(~hasNoChannel);
+         end         
          
-         % shared lists
-         stationCodes = [];
-         stationSites = [];
-         channelCodes = [];
-         locationCodes = [];
+         %eliminate networks that have no stations
+         networksWithoutStations = arrayfun(@(x) isempty(x.Stations),networkTree);         
+         networkTree(networksWithoutStations) = [];
          
-         %Translate from a tree structure to a flat channel list
-         for eachNetwork = 1 : numel(networkTree)
-            moveEverythingInTreeToTopLevel();
-         end %eachNetwork
-         channelList = deal([networkTree.Channels]);
-         
-         % clean up the Channel List
-         moveSensitivityUpToMainLevel();
-         moveSensorUpToMainLevel();
-         
-         if ~ALPHABETIZE
-            reorderForCoherency();
+         if isempty(networkTree); 
+            warning('IRISFETCH:flattenToChannel:noValidChannels','No channels found, returning an empty array');
+            return
          end
          
-         return
-         
-         % ----------------------------------------------------------------
-         % Flatten to Channel : Nested functions
-         % ----------------------------------------------------------------
-         
-         function moveEverythingInTreeToTopLevel()
-            grabStationCodesForThisNetworkTree();
-            for eachStation = 1 : numel(networkTree(eachNetwork).Stations)
-               stationSites = {networkTree(eachNetwork).Stations(eachStation).Site}; %store Current Station Site List
-               organizeAtStationEpochLevel();
-            end %eachStation
-            %stripEpochsFieldFromStations();
-            moveChannelsUpToNetworkLevel();
-         end
-         
-         
-         
-         function  moveSensitivityUpToMainLevel()
-            % Bring Sensitivity and Sensor up, since it is a 1x1 struct
-            %moveFieldUpToMainLevelThenDelete('Sensitivity');
-         end
-         
-         function  moveSensorUpToMainLevel()
-            %moveFieldUpToMainLevelThenDelete('Sensor');
-         end
-         
-         function  moveFieldUpToMainLevelThenDelete(fieldToMigrate)
-            for n=1:numel(channelList)
-               if isstruct(channelList(n).(fieldToMigrate))
-                  sensor=channelList(n).(fieldToMigrate);
-                  fn = fieldnames(sensor);
-                  for m=1:numel(fn);
-                     channelList(n).(fn{m}) = sensor.(fn{m});
-                  end
-               end
-            end
-            channelList = rmfield(channelList,{(fieldToMigrate)});
-         end
-         
-         function grabStationCodesForThisNetworkTree()
-            stationCodes = {networkTree(eachNetwork).Stations.StationCode};
-         end
-         
-         function stripEpochsFieldFromStations()
-            networkTree(eachNetwork).Stations = rmfield(networkTree(eachNetwork).Stations,'Epochs');
-         end
-         
-         function moveChannelsUpToNetworkLevel()
-            networkTree(eachNetwork).Channels = deal([networkTree(eachNetwork).Stations.Channels]);
-         end
-         
-         function organizeAtStationEpochLevel()
-            if ~isstruct(networkTree(eachNetwork).Stations(eachStation).Channels)
-               return; % nothing to do.
-            end
-            storeChannelCodes();
-            storeLocationCodes();
-            organizeAtChannelLevel()
-            %networkTree(eachNetwork).Stations(eachStation).Channels = [networkTree(eachNetwork).Stations(eachStation).Channels];
-            % now, the structure is [ net -> sta -> epoch -> chan ]\
-            %end %eachStationEpoch
-            
-            function storeChannelCodes()
-               channelCodes = {networkTree(eachNetwork).Stations(eachStation).Channels.ChannelCode};
-            end
-            
-            function storeLocationCodes()
-               locationCodes = {networkTree(eachNetwork).Stations(eachStation).Channels.LocationCode};
-            end
-            
-            function organizeAtChannelLevel()
-               return;
-               for eachChannel = 1 : numel(networkTree(eachNetwork).Stations(eachStation).Channels)
-                  theseEpochs = networkTree(eachNetwork).Stations(eachStation).Channels(eachChannel).Epochs;
-                  
-                  [theseEpochs.NetworkCode] = deal(networkTree(eachNetwork).NetworkCode);
-                  [theseEpochs.NetworkDescription] = deal(networkTree(eachNetwork).Description);
-                  
-                  [theseEpochs.StationCode] = deal(stationCodes{eachStation});
-                  [theseEpochs.ChannelCode] = deal(channelCodes{eachChannel});
-                  [theseEpochs.LocationCode]= deal(locationCodes{eachChannel});
-                  [theseEpochs.Site] = deal(stationSites{eachStationEpoch});
-                  networkTree(eachNetwork).Stations(eachStation).Epochs(eachStationEpoch).Channels(eachChannel).Epochs = theseEpochs;
-               end %eachChannel
-               
-               
+         for n=1:numel(networkTree)
+            nc    = networkTree(n).NetworkCode;
+            nd    = networkTree(n).Description;
+            [networkTree(n).Stations.NetworkCode]        = deal(nc);
+            [networkTree(n).Stations.NetworkDescription] = deal(nd);
+            for m = 1 : numel(networkTree(n).Stations)
+               sc = networkTree(n).Stations(m).StationCode;
+               sd = networkTree(n).Stations(m).Description;
+               sn = networkTree(n).Stations(m).Site;
+               [networkTree(n).Stations(m).Channels.NetworkCode]        = deal(nc);
+               [networkTree(n).Stations(m).Channels.NetworkDescription] = deal(nd);
+               [networkTree(n).Stations(m).Channels.StationCode]        = deal(sc);
+               [networkTree(n).Stations(m).Channels.StationDescription] = deal(sd);
+               [networkTree(n).Stations(m).Channels.Site] = deal(sn);
+               % write the long StationName again to the main level.
+               [networkTree(n).Stations(m).Channels.StationName] = deal(sn.Name);
             end
          end
+         tmp = [networkTree.Stations];
+         channelList=[tmp.Channels];    
          
-         function reorderForCoherency()
-            % now, reorder to make it visually coherent.
-            descriptorstuff={'NetworkCode';'StationCode';'LocationCode';'ChannelCode';'NetworkDescription';'Site'};
-            positionalstuff={'Latitude';'Longitude';'Elevation';'Depth';'Azimuth';'Dip'};
-            otherstuff={'SampleRate';'StartDate';'EndDate'};
-            fieldsattop=[descriptorstuff; positionalstuff; otherstuff];
-            if ~isstruct(channelList)
-               warning('empty channel list')
-               return
-            end
-            fn = fieldnames(channelList);
-            
-            fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
-            
-            for n=1:numel(fieldsattop);
-               fn(strcmp(fn,fieldsattop(n))) = [];
-            end
-            neworder = [fieldsattop; fn];
-            channelList = orderfields(channelList, neworder);
+         clear tmp
+         for n=1:numel(channelList)
+            channelList(n).Longitude  = channelList(n).LongitudeValue;
+            channelList(n).Latitude   = channelList(n).LatitudeValue;
+            channelList(n).Elevation  = channelList(n).ElevationValue;
+            channelList(n).Depth      = channelList(n).DepthValue;
+            channelList(n).Azimuth    = channelList(n).AzimuthValue;
+            channelList(n).Dip        = channelList(n).DipValue;
+            channelList(n).SampleRate = channelList(n).SampleRateValue;
          end
+         channelList = rmfield(channelList, {'LongitudeValue','LatitudeValue','ElevationValue','DepthValue','AzimuthValue','DipValue','SampleRateValue'});     
          
+         % now, reorder to make it visually coherent.
+         descriptorstuff={'NetworkCode';'StationCode';'LocationCode';'ChannelCode';'NetworkDescription';'StationName';'Site'};
+         positionalstuff={'Latitude';'Longitude';'Elevation';'Depth';'Azimuth';'Dip'};
+         otherstuff={'SampleRate';'SampleRateRatio';'StartDate';'EndDate'};
+         fieldsattop=[descriptorstuff; positionalstuff; otherstuff];
+         
+         fn = fieldnames(channelList);
+         fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
+         
+         for n=1:numel(fieldsattop);
+            fn(strcmp(fn,fieldsattop(n))) = [];
+         end
+         neworder = [fieldsattop; fn];
+         channelList = orderfields(channelList, neworder);
       end
       
-      function flatStruct = flattenToStation(networkTree)
+      function stationList = flattenToStation(networkTree)
          %irisFetch.flattenToStation flattens the structure returned by irisFetch.Stations
          %
          %USAGE
@@ -877,111 +780,43 @@ classdef irisFetch
          %
          %This takes the hierarchy returned by irisFetch.Stations, and
          %returns a 1xN array of stations (station epochs, technically).
-         %
-         % networkTree is a nested structure of the following format
-         %   network.Station.Epoch.[etc]
-         %
-         % flatStruct is an array containing ALL station epochs, along
-         % with unique identifying information from the parent levels,
-         % such as networkTree.code, networkTree.station.code, etc.
          
-         if isempty(networkTree)
-            flatStruct = networkTree;
+         assert(isa(networkTree,'struct'),'Cannot Flatten a non-structure');
+                  
+         emptyNetworks = arrayfun(@(x) isempty(x.Stations),networkTree);
+         
+         for n=1:numel(networkTree)
+            nc    = networkTree(n).NetworkCode;
+            nd    = networkTree(n).Description;
+            [networkTree(n).Stations.NetworkCode]        = deal(nc);
+            [networkTree(n).Stations.NetworkDescription] = deal(nd);
+         end
+         
+         stationList = [networkTree(~emptyNetworks).Stations];
+         
+         for m=1:numel(stationList)
+               stationList(m).StationName = stationList(m).Site.Name;
+         end
+         
+         % now, reorder to make it visually coherent.
+         descriptorstuff={'NetworkCode';'StationCode';'NetworkDescription';'StationName';'Site'};
+         positionalstuff={'Latitude';'Longitude';'Elevation'};
+         otherstuff={'StartDate';'EndDate'};
+         fieldsattop=[descriptorstuff; positionalstuff; otherstuff];
+         if ~isstruct(stationList)
+            warning('IRISFETCH:flattenToStation:noValidStations','No stations found, returning an empty array');
             return
          end
+         fn = fieldnames(stationList);
+         fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
          
-         if isfield(networkTree,'Stations')
-            if isempty([networkTree.Stations])
-               flatStruct = networkTree;
-               return
-            end
-         else
-            if isempty([networkTree.Station])
-               flatStruct = networkTree;
-               return
-            end
+         for n=1:numel(fieldsattop);
+            fn(strcmp(fn,fieldsattop(n))) = [];
          end
-         
-         alphabetize = false; %leave fields in alphabetical order, or reorder according to common-sense
-         
-         migrateNetworkDetailsToStationLevel();
-         migrateStationDetailsToEpochLevel();
-         removeChannelsIfEmpty();
-         
-         if ~alphabetize
-            reorderForCoherency();
-         end
-         
-         return
-         
-         % ----------------------------------------------------------------
-         % Flatten to Station : Nested functions
-         % ----------------------------------------------------------------
-         
-         function migrateNetworkDetailsToStationLevel()
-            if isfield(networkTree,'Stations')
-               nonEmptyStations = arrayfun(@(x) ~isempty(x.Stations),networkTree);
-               % TODO: Figure out how to keep empty stations from interfering.
-               for netIdx = 1: numel(networkTree)
-                  
-                  % add the Network code to the Stations
-                  [networkTree(netIdx).Stations.NetworkCode] = deal(networkTree(netIdx).NetworkCode);
-                  [networkTree(netIdx).Stations.NetworkDescription] = deal(networkTree(netIdx).Description);
-               end
-               % flatStruct = [networkTree.Stations];
-               flatStruct = [networkTree(nonEmptyStations).Stations];
-            else
-               for netIdx = 1: numel(networkTree)
-                  % add the Network code to the Stations
-                  [networkTree(netIdx).Station.NetworkCode] = deal(networkTree(netIdx).NetworkCode);
-                  [networkTree(netIdx).Station.NetworkDescription] = deal(networkTree(netIdx).Description);
-               end
-               flatStruct = [networkTree.Station];
-            end
-         end
-         
-         function migrateStationDetailsToEpochLevel()
-            
-            for staIdx = 1 : numel(flatStruct);
-               [flatStruct(staIdx).StationCode] = deal(flatStruct(staIdx).StationCode);
-               %[flatStruct(staIdx).NetworkCode] = deal(flatStruct(staIdx).NetworkCode);
-               %[flatStruct(staIdx).NetworkDescription] = deal(flatStruct(staIdx).NetworkDescription);
-            end
-            % flatStruct = rmfield(flatStruct,'Code');
-            % flatStruct = [flatStruct.Epochs];
-         end
-         
-         function removeChannelsIfEmpty()
-            if isfield(flatStruct,'Channels')
-               if isempty([flatStruct.Channels]);
-                  flatStruct = rmfield(flatStruct,'Channels');
-               end
-            else
-               if isempty([flatStruct.Channel]);
-                  flatStruct = rmfield(flatStruct,'Channel');
-               end
-            end
-         end
-         
-         function reorderForCoherency()
-            descriptorstuff={'NetworkCode';'StationCode';'LocationCode';'ChannelCode';'NetworkDescription';'Site'};
-            positionalstuff={'Latitude';'Longitude';'Elevation';'Depth';'Azimuth';'Dip'};
-            otherstuff={'SampleRate';'StartDate';'EndDate'};
-            fieldsattop=[descriptorstuff; positionalstuff; otherstuff];
-            
-            fn = fieldnames(flatStruct);
-            
-            fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
-            
-            for n=1:numel(fieldsattop);
-               fn(strcmp(fn,fieldsattop(n))) = [];
-            end
-            neworder = [fieldsattop; fn];
-            flatStruct = orderfields(flatStruct, neworder);
-         end
-         
-      end %fn flattenToStation
-
+         neworder = [fieldsattop; fn];
+         stationList = orderfields(stationList, neworder);
+      end
+     
       function [js, je] = testResp(starttime, endtime)
          n=now;
          testThis('IU','ANMO','00','BHZ',[],[]);
@@ -1011,7 +846,8 @@ classdef irisFetch
                
                parampairs={
                   'network'   ,varargin{1}, 'station'   ,varargin{2}, 'location'  ,varargin{3}, 'channel'   ,varargin{4}
-                  }
+                  };
+               disp(paramPairs)
                
                if ~isempty(varargin{5})
                   st = datestr(varargin{5},31);
@@ -1025,7 +861,7 @@ classdef irisFetch
                   parampairs = [parampairs, {'endtime',ed}];
                end
                
-               [s,code]=urlread('http://www.iris.edu/ws/resp/query','get', parampairs);
+               [s,code]=urlread('http://www.iris.edu/ws/resp/query','get', parampairs); %#ok<NASGU>
                
                assert(strcmp(r,s));
             catch myerror
@@ -1257,7 +1093,7 @@ classdef irisFetch
             all_methods                 = methods(thisClass);
             full_methods                = methods(thisClass,'-full');
             is_setter                   = strcmp(thisClass, strtok(full_methods));
-            [~, setter_inputs]          = strtok(strtok(full_methods(is_setter),')'),'('); %loose ()
+            [UNUSED_VARIABLE, setter_inputs]          = strtok(strtok(full_methods(is_setter),')'),'('); %#ok<ASGLU> %loose ()
             
             listOfArguments(classIndex) = {strrep(setter_inputs,'(','')};
             listOfSetters(classIndex)   = {all_methods(is_setter)};
@@ -1298,7 +1134,7 @@ classdef irisFetch
          p1          = strfind(argList,'(');
          p2          = strfind(argList,')');
          for n=1:numel(argList)
-            argType(n) = {argList{n}(p1{n}+1:p2{n}-1)};
+            argType(n) = {argList{n}(p1{n}+1:p2{n}-1)}; %#ok<AGROW>
          end
          
          className(loc)             = {thisClass};
@@ -1405,13 +1241,13 @@ classdef irisFetch
          if irisFetch.recursionAssert
             try
                tf = stacklist(myClass);
-            catch
+            catch %#ok<CTCH>
                stacklist(myClass)= false;
                tf = false;
             end
             if tf
                % if stacklist(myClass)
-               [x,~] = dbstack(1); %remove this call from the stack, and get the list
+               [x,UNUSED_VARIABLE] = dbstack(1); %#ok<NASGU> %remove this call from the stack, and get the list
                error(['\n\nRecursion detected. attempt to parse a\n  [%s] \n  '...
                   'when a parent of the same class exists.\n'...
                   'Please comment out the offending line of code (line %d)\n'],myClass,x(1).line);
@@ -1428,7 +1264,7 @@ classdef irisFetch
                end
                % disp(['parsing array of: ', class(value.get(0)) ]) ;
                for n=1 : value.size()
-                  s(n)=irisFetch.parse(value.get(n-1)); % class(value.get(0))
+                  s(n)=irisFetch.parse(value.get(n-1)); %#ok<AGROW> % class(value.get(0))
                end
             case 'double'
                s=value;
@@ -1699,7 +1535,7 @@ classdef irisFetch
                s.FlinnEngdahlRegionName  = char(value.getFlinnEngdahlRegionName());
                try
                   tmpPreferredOrigin         = irisFetch.parse(value.getPreferredOrigin()); % get edu.iris.dmc.event.model.Origin
-               catch
+               catch %#ok<CTCH>
                   tmpPreferredOrigin=[];
                end
                if ~isempty(tmpPreferredOrigin)
@@ -1978,7 +1814,7 @@ classdef irisFetch
       
       function s = parseAnArray(theArray)
          persistent getAz getDis getResid
-         if isempty(getAz)
+         if isempty(getAz) || isempty(getDis) || isempty(getResid)
             getAz    =@(x) double(x.getAzimuth());
             getDis   =@(x) double(x.getDistance());
             getResid =@(x) double(x.getTimeResidual());
@@ -2050,7 +1886,7 @@ classdef irisFetch
          else
             % a cell may have multiple values.
             for n=1:numel(value)
-               crit.(addMethod)(value{n})
+               crit.(addMethod)(value{n});
             end
          end
       end
