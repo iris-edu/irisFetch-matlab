@@ -120,6 +120,12 @@ classdef irisFetch
          %     Sample:
          %       unamepwd = {'nobody@iris.edu', 'anonymous'}
          %
+         %  tr = irisFetch.Traces(..., urlbase) will allow traces to be read from an
+         %  alternate data center. url base is only the first part of the web address. For
+         %  example, the IRIS datacenter would be 'http://service.iris.edu/'. These
+         %  settings are "sticky", so that all calls for waveform data or station metadata
+         %  will go to that datacenter until a new one is specified.
+         %
          %  ABOUT THE RETURNED TRACE
          %    The returned trace(s) will be a 1xN array of structs. Each struct contains
          %    fields with information pertaining to that specific trace, such as channel
@@ -164,6 +170,7 @@ classdef irisFetch
          quality     = irisFetch.DEFAULT_QUALITY;
          username    = '';
          userpwd     = '';
+         newbase     = '';
          safeLocation = @(x) strrep(x,' ','-');
          
          extractAdditionalArguments(varargin);
@@ -175,7 +182,7 @@ classdef irisFetch
          tracedata      = edu.iris.dmc.extensions.fetch.TraceData();
          tracedata.setAppName(irisFetch.appName);
          tracedata.setVerbosity(verbosity);
-         
+         if ~isempty(newbase); tracedata.setBASE_URL(newbase);end;
          getTheTraces();
          
          return
@@ -207,8 +214,14 @@ classdef irisFetch
                         case {'VERBOSE'}
                            verbosity   = true;
                         otherwise
+                           if length(param)>7 && strcmpi(param(1:7),'http://')
+                              % set the bases
+                              newbase = param;
+                              %tracedata.setWAVEFORM_URL('http://ws.resif.fr/dataselect/1/')
+                           else
                            error('IRISFETCH:Trace:unrecognizedParameter',...
                               'The text you included as an optional parameter did not parse to either a qualitytype (D,R,Q,M,B) or ''INCLUDEPZ'' or ''VERBOSE''');
+                           end
                      end
                      %case 'logical' DEPRECATED
                      %   verbosity         = param; % old usage, deprecated.
@@ -226,7 +239,6 @@ classdef irisFetch
          
          function getTheTraces()
             try
-               tracedata.setWAVEFORM_URL('http://ws.resif.fr/dataselect/1/')
                if authorize
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
                      startDateStr, endDateStr, quality, getsacpz, username, userpwd);
@@ -538,6 +550,10 @@ classdef irisFetch
          %CONVENIENCE PARAMETERS
          %   'boxcoordinates'    : [minLat, maxLat, minLon, maxLon]   % use NaN as a wildcard
          %   'radialcoordinates' : [Lat, Lon, MaxRadius, MinRadius]   % MinRadius is optional
+         %
+         %NOTE: Any parameter-value pair that is not listed here will be passed along to
+         %      the Event Service. this is to accomodate other datacenters that may have
+         %      specialized request parameters.
          
          import edu.iris.dmc.*
          % import edu.iris.dmc.*
@@ -1952,7 +1968,7 @@ classdef irisFetch
                %handle special cases
                case 'boxcoordinates'
                   crit = irisFetch.setBoxCoordinates(crit, value);
-                  
+                                    
                case 'radialcoordinates'
                   crit.setLatitude(java.lang.Double(value(1)));
                   crit.setLongitude(java.lang.Double(value(2)));
@@ -1972,9 +1988,22 @@ classdef irisFetch
                   assert((islogical(value)||isnumeric(value)) &&isscalar(value),'The value of MatchTimeseries should be a logical: true or false (no quotes)');
                   crit.setMatchTimeSeries(value);
                   
+               case 'limit'
+                  crit.setFetchLimit(java.lang.Integer(value));
                otherwise
-                  % this will blow up if java doesn't recognize "value"
-                  crit.(allMethods{strcmpi(allMethods,param)})(value);
+                  try
+                     % this will blow up if java doesn't recognize "value"
+                     crit.(allMethods{strcmpi(allMethods,param)})(value);
+                  catch
+                     switch(class(value))
+                        case 'double'; value=num2str(value);
+                        case 'logical'; if value; value='true'; else value='false'; end
+                     end
+                     assert(ischar(value),'IRISFETCH:Event:InvalidParameterPair','When adding arbitrary parameter pairs, value must be a string. In this case, %s=<%s>',param,class(value));
+                     crit.add(param,value); %as of 2.0.2 can add arbitrary parameter/value pairs.
+                  end
+                  % %this will blow up if java doesn't recognize "value"
+                  % crit.(allMethods{strcmpi(allMethods,param)})(value);
             end
          end
       end
