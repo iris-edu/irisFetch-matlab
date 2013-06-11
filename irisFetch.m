@@ -24,14 +24,14 @@ classdef irisFetch
    %  for more details, click on 'connectToJar' above.
    %
    %  For additional guidance, type help <method>, use irisFetch.runExamples, or check out
-   %  the online manual.
+   %  the online manual http://www.iris.edu/dms/nodes/dmc/software/downloads/irisFetch.m/.
    %
    %see also JAVAADDPATH
    
    
    % Celso Reyes, Rich Karstens
    % IRIS-DMC
-   % MAY 2013
+   % JUNE 2013
    
    %{
  *******************************************************************************
@@ -55,9 +55,9 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.0b';  % irisFetch version number
+      VERSION           = '2.0.1';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
-      MIN_JAR_VERSION   = '2.0'; % minimum version of IRIS-WS jar required for compatibility
+      MIN_JAR_VERSION   = '2.0.2'; % minimum version of IRIS-WS jar required for compatibility
       
       VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
       DEFAULT_QUALITY   = 'B'; % default Quality for Traces
@@ -217,7 +217,6 @@ classdef irisFetch
                            if length(param)>7 && strcmpi(param(1:7),'http://')
                               % set the bases
                               newbase = param;
-                              %tracedata.setWAVEFORM_URL('http://ws.resif.fr/dataselect/1/')
                            else
                            error('IRISFETCH:Trace:unrecognizedParameter',...
                               'The text you included as an optional parameter did not parse to either a qualitytype (D,R,Q,M,B) or ''INCLUDEPZ'' or ''VERBOSE''');
@@ -266,13 +265,13 @@ classdef irisFetch
          end %function getTheTraces
       end % Traces
       
-      function [channelStructure, urlParams] = Channels(varargin)
+      function [channelStructure, urlParams] = Channels(detailLevel, varargin)
          %irisFetch.Channels retrieves station metadata from IRIS-DMC as an array of channels
          %  s = irisFetch.Channels(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
-         %  station metadata from the IRIS-DMC into an array of channels.  DETAIL is one
-         %  of 'CHANNEL', or 'RESPONSE' and must be explicitly declared. Network, station,
-         %  location, and channel parameters are passed directly to the java library, so
-         %  both comma-separated  lists and wildcards (? and *) are accepted.  
+         %  station metadata from the IRIS-DMC into an array of channels.  DETAIL is one of 
+         %  'CHANNEL', or 'RESPONSE' and should be explicitly declared. DETAIL defaults to 'CHANNEL'
+         %  Network, station, location, and channel parameters are passed directly to the
+         %  java library, so both comma-separated  lists and wildcards (? and *) are accepted.  
          %  
          %  All five parameters are required for all queries, but may be wildcarded by
          %  using '' for their values.
@@ -294,19 +293,24 @@ classdef irisFetch
          %
          %See also Networks, Stations
          
-         assert(ismember(upper(varargin(1)),{'CHANNEL','RESPONSE'}),...
+         if isempty(detailLevel)
+            detailLevel = 'CHANNEL';
+         end         
+         assert(ismember(upper(detailLevel),{'CHANNEL','RESPONSE'}),...
             'To retrieve channels, the detailLevel must be either ''CHANNEL'' or ''RESPONSE''');
-         [channelStructure, urlParams] = irisFetch.Networks(varargin{:});
+         [channelStructure, urlParams] = irisFetch.Networks(detailLevel, varargin{:});
          if ~isempty(channelStructure)
             channelStructure = irisFetch.flattenToChannel(channelStructure);
          end
       end
       
-      function [stationStructure, urlParams] = Stations(varargin)
+      function [stationStructure, urlParams] = Stations(detailLevel, varargin)
          %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of stations
          %  s = irisFetch.Stations(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
          %  station metadata from the IRIS-DMC into an array of stations.  DETAIL is one
-         %  of 'STATION','CHANNEL', or  'RESPONSE' and must be explicitly declared.
+         %  of 'STATION','CHANNEL', or  'RESPONSE' and should be explicitly declared.
+         %  DETAIL defaults to 'STATION'
+         %
          %  Network, station, location, and channel parameters are passed directly to the
          %  java library, so both comma-separated lists and wildcards (? and *) are accepted.
          %  
@@ -330,9 +334,12 @@ classdef irisFetch
          %
          %See also Networks, Channels
          
-         assert(ismember(upper(varargin(1)),{'STATION','CHANNEL','RESPONSE'}),...
+         if isempty(detailLevel)
+            detailLevel = 'STATION';
+         end         
+         assert(ismember(upper(detailLevel),{'STATION','CHANNEL','RESPONSE'}),...
             'To retrieve stations, the detailLevel must be either ''STATION'', ''CHANNEL'', or ''RESPONSE''');
-         [stationStructure, urlParams] = irisFetch.Networks(varargin{:});
+         [stationStructure, urlParams] = irisFetch.Networks(detailLevel,varargin{:});
          if ~isempty(stationStructure)
             stationStructure = irisFetch.flattenToStation(stationStructure);
          end
@@ -345,8 +352,8 @@ classdef irisFetch
          %  all queries, but may be wildcarded by using '' for their values. Network,
          %  station, location, and channel parameters are passed directly to the java
          %  library, so both comma-separated lists and wildcards (? and *) are accepted.
-         %  Detail is one of 'NETWORK','STATION','CHANNEL', or 'RESPONSE' and must be  
-         %  explicitly declared. 
+         %  Detail is one of 'NETWORK','STATION','CHANNEL', or 'RESPONSE' and should be  
+         %  explicitly declared. Defaults to 'NETWORK' 
          %
          %  [s, myParams] = irisFetch.Networks( ... ) also returns the URL parameters that
          %  were used to make the query.
@@ -397,6 +404,11 @@ classdef irisFetch
          if ~exist('criteria.StationCriteria','class')
             irisFetch.connectToJar()
          end
+                  
+         if isempty(detailLevel)
+            detailLevel = 'NETWORK';
+         end         
+         
          verifyArguments(nargin);
          setOutputLevel();
          connectToStationService();
@@ -514,7 +526,7 @@ classdef irisFetch
             end %catch
          end %fetchTheStations
          
-      end %Stations
+      end %Networks
       
       function [events, urlParams] = Events(varargin)
          %irisFetch.Events retrieves event data from the IRIS-DMC
@@ -609,7 +621,7 @@ classdef irisFetch
          %  IRIS-WS jar file. If it does not exist, then it will try to access the latest
          %  jar over the internet. If it cannot connect, it will error.
          %
-         %  irisFetch requires version 2.0 or greater of the IRIS Web Services Library java jar,
+         %  irisFetch requires version 2.0.2 or greater of the IRIS Web Services Library java jar,
          %  available from:
          %
          %  http://www.iris.edu/files/IRIS-WS/2/
@@ -666,7 +678,7 @@ classdef irisFetch
          urlparams = char(crit.toUrlParams());
          
          serviceManager = edu.iris.dmc.service.ServiceUtil.getInstance();
-         baseUrl = 'http://www.iris.edu/ws/resp/';
+         baseUrl = 'http://service.iris.edu/irisws/resp/1/';
          serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
          service = serviceManager.getRespService(baseUrl);
          respstructures= char(service.fetch(crit));
@@ -701,6 +713,9 @@ classdef irisFetch
             ' ev = irisFetch.Events(''minimummagnitude'',8.0)'
             ' ev(1)'
             ' ev = irisFetch.Events(''starttime'',''2010-02-27'',''endtime'',''2010-02-28 12:00:00'',''catalog'',''ISC'',''includeallorigins'',true,''includeallmagnitudes'',true)'
+            ' '
+            '% retrieve the RESP formatted response for a station'
+            'irisFetch.Resp(''IU'',''ANMO'',''00'',''BHZ'',now,now)'
             };
          for n=1:numel(codeToExecute)
             disp(codeToExecute{n});
@@ -866,7 +881,7 @@ classdef irisFetch
                   parampairs = [parampairs, {'endtime',ed}];
                end
                
-               [s,code]=urlread('http://www.iris.edu/ws/resp/query','get', parampairs); %#ok<NASGU>
+               [s,code]=urlread('http://service.iris.edu/irisws/resp/1/query','get', parampairs); %#ok<NASGU>
                
                assert(strcmp(r,s));
             catch myerror
