@@ -761,17 +761,6 @@ classdef irisFetch
          channelList=[tmp.Channels];    
          
          clear tmp
-         for n=1:numel(channelList)
-            channelList(n).Longitude  = channelList(n).LongitudeValue;
-            channelList(n).Latitude   = channelList(n).LatitudeValue;
-            channelList(n).Elevation  = channelList(n).ElevationValue;
-            channelList(n).Depth      = channelList(n).DepthValue;
-            channelList(n).Azimuth    = channelList(n).AzimuthValue;
-            channelList(n).Dip        = channelList(n).DipValue;
-            channelList(n).SampleRate = channelList(n).SampleRateValue;
-         end
-         channelList = rmfield(channelList, {'LongitudeValue','LatitudeValue','ElevationValue','DepthValue','AzimuthValue','DipValue','SampleRateValue'});     
-         
          % now, reorder to make it visually coherent.
          descriptorstuff={'NetworkCode';'StationCode';'LocationCode';'ChannelCode';'NetworkDescription';'StationName';'Site'};
          positionalstuff={'Latitude';'Longitude';'Elevation';'Depth';'Azimuth';'Dip'};
@@ -1692,14 +1681,14 @@ classdef irisFetch
                s.PreAmplifier            = irisFetch.parse(value.getPreAmplifier()); % get edu.iris.dmc.fdsn.station.model.Equipment
                s.ExternalReference = irisFetch.parseAnArray(value.getExternalReference());
                
-               s.LatitudeValue           = value.getLatitudeValue().doubleValue;
-               s.LongitudeValue          = value.getLongitudeValue().doubleValue;
-               s.ElevationValue          = value.getElevationValue().doubleValue;
-               s.DepthValue              = value.getDepthValue().doubleValue;
-               s.AzimuthValue            = value.getAzimuthValue().doubleValue;
-               s.DipValue                = value.getDipValue().doubleValue;
+               s.Latitude           = value.getLatitudeValue().doubleValue;
+               s.Longitude          = value.getLongitudeValue().doubleValue;
+               s.Elevation          = value.getElevationValue().doubleValue;
+               s.Depth              = value.getDepthValue().doubleValue;
+               s.Azimuth            = value.getAzimuthValue().doubleValue;
+               s.Dip                = value.getDipValue().doubleValue;
                
-               s.SampleRateValue         = value.getSampleRateValue().doubleValue;
+               s.SampleRate         = value.getSampleRateValue().doubleValue;
                
                s.CalibrationUnits        = irisFetch.parse(value.getCalibrationUnits()); % get edu.iris.dmc.fdsn.station.model.Units
                %         s.Comment = irisFetch.parseAnArray(value.getComment());
