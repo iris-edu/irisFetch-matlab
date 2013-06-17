@@ -1536,10 +1536,10 @@ classdef irisFetch
                
             case {'edu.iris.dmc.event.model.Pick'}
                s.Location                = char(value.getLocation());
-               s.Channel                 = char(value.getChannels());
+               s.Channel                 = char(value.getChannel());
                s.Time                    = irisFetch.jdate2mdate(value.getTime());
                s.Network                 = char(value.getNetwork());
-               s.Station                 = char(value.getStations());
+               s.Station                 = char(value.getStation());
                s.PickId                  = char(value.getPickId());
                
             case {'edu.iris.dmc.event.model.Arrival'}
