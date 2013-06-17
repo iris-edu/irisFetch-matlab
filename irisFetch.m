@@ -62,7 +62,7 @@ classdef irisFetch
       VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
       DEFAULT_QUALITY   = 'B'; % default Quality for Traces
       FETCHER_LIST      = {'Traces','Stations','Events','Resp'}; % list of functions that fetch
-      forceDataAsDouble = false; %require that traces are returned as doubles regardless of original format
+      forceDataAsDouble = true; %require that traces are returned as doubles regardless of original format
    end %constant properties
    
    properties (Constant = true, Hidden = true)
@@ -239,9 +239,17 @@ classdef irisFetch
          function getTheTraces()
             try
                if authorize
+                  if verbosity
+                     fprintf('traces = tracedata.fetchTraces("%s", "%s", "%s", "%s", "%s", "%s", ''%s'', %d, "%s", "%s")\n',...
+                        network, station, location, channel, startDateStr, endDateStr, quality, getsacpz, username, char(userpwd - userpwd + 42));
+                  end
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
                      startDateStr, endDateStr, quality, getsacpz, username, userpwd);
                else
+                  if verbosity
+                     fprintf('traces = tracedata.fetchTraces("%s", "%s", "%s", "%s", "%s", "%s", ''%s'', %d)\n',...
+                        network, station, location, channel, startDateStr, endDateStr, quality, getsacpz);
+                  end
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
                      startDateStr, endDateStr, quality, getsacpz);
                end
