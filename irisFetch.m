@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.1';  % irisFetch version number
+      VERSION           = '2.0.2';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.2'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -237,6 +237,7 @@ classdef irisFetch
          end % extractAdditionalArguments
          
          function getTheTraces()
+            traces=[];
             try
                if authorize
                   if verbosity
@@ -261,10 +262,17 @@ classdef irisFetch
                            'Trace found no requested data and returned the following error:\n%s',...
                            je.message);
                      end
+                     if any(strfind(je.message,'NoDataFoundException'));
+                        if verbosity
+                           warning('IRISFETCH:Trace:URLNotFoundException',...
+                           'Trace found no requested data and returned the following error:\n%s',...
+                           je.message);
+                        end
+                     end
                   otherwise
                      fprintf('Exception occured in IRIS Web Services Library: %s\n', je.message);
+                     rethrow(je)
                end
-               rethrow(je)
             end
             
             ts = irisFetch.convertTraces(traces);
