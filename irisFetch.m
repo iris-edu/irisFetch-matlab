@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.2';  % irisFetch version number
+      VERSION           = '2.0.3';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.2'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -238,29 +238,45 @@ classdef irisFetch
          
          function getTheTraces()
             traces=[];
+            if verbosity
+               irisFetch.resetWaveformURL();
+               irisFetch.tellMeTheWaveformURL();
+               irisFetch.tellMeTheStationURL();
+            end
             try
                if authorize
                   if verbosity
                      fprintf('traces = tracedata.fetchTraces("%s", "%s", "%s", "%s", "%s", "%s", ''%s'', %d, "%s", "%s")\n',...
-                        network, station, location, channel, startDateStr, endDateStr, quality, getsacpz, username, char(userpwd - userpwd + 42));
+                        network, station, location, channel, startDateStr, endDateStr, quality, getsacpz, username, userpwd);%char(userpwd - userpwd + 42));
                   end
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
-                     startDateStr, endDateStr, quality, getsacpz, username, userpwd);
+                     startDateStr, endDateStr, quality, getsacpz, username, userpwd);  %db removed (;)
                else
                   if verbosity
                      fprintf('traces = tracedata.fetchTraces("%s", "%s", "%s", "%s", "%s", "%s", ''%s'', %d)\n',...
                         network, station, location, channel, startDateStr, endDateStr, quality, getsacpz);
                   end
                   traces = tracedata.fetchTraces(network, station, location, channel, ...
-                     startDateStr, endDateStr, quality, getsacpz);
+                     startDateStr, endDateStr, quality, getsacpz); %db removed (;)
+               end
+               if verbosity
+                  fprintf('tracedata.fetchTraces successfully completed, resulting in %d traces before converting\n', numel(traces)); %db
                end
             catch je
+               warning('An [%s] exception occurred in irisFetch.getTheTraces() but was caught\n full text follows:\nmessage:\n%s\n\n', je.identifier,je.message) %db
+               disp(je.cause); %db
+               disp(je.stack); %db
+               
                switch je.identifier
                   case 'MATLAB:Java:GenericException'
                      if any(strfind(je.message,'URLNotFoundException'));
                         error('IRISFETCH:Trace:URLNotFoundException',...
                            'Trace found no requested data and returned the following error:\n%s',...
                            je.message);
+                     end
+                     if any(strfind(je.message,'java.io.IOException: edu.iris.dmc.service.UnauthorizedAccessException'));
+                        error('IRISFETCH:Trace:UnauthorizedAccessException',...
+                           'Invalid Username and Password combination\n');
                      end
                      if any(strfind(je.message,'NoDataFoundException'));
                         if verbosity
@@ -281,6 +297,29 @@ classdef irisFetch
          end %function getTheTraces
       end % Traces
       
+      
+            function tellMeTheWaveformURL()
+               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
+               servicedb=serviceManagerdb.getWaveformService();
+               fprintf('the waveform service url is: [%s]\n',char(servicedb.getBaseUrl));
+               pause(1)
+            end
+            
+            function tellMeTheStationURL()
+               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
+               servicedb=serviceManagerdb.getStationService();
+               fprintf('the station service url is: [%s]\n',char(servicedb.getBaseUrl));
+               pause(1)
+            end
+            
+            function resetWaveformURL()
+               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
+               servicedbs = serviceManagerdb.getStationService('http://service.iris.edu/fdsnwsbeta/station/1/')
+               servicedb = serviceManagerdb.getWaveformService('http://service.iris.edu/fdsnwsbeta/dataselect/1/');               
+               tracedata =  edu.iris.dmc.extensions.fetch.TraceData();
+               tracedata.setWAVEFORM_URL('http://service.iris.edu/fdsnwsbeta/dataselect/1/')
+            end
+            
       function [channelStructure, urlParams] = Channels(detailLevel, varargin)
          %irisFetch.Channels retrieves station metadata from IRIS-DMC as an array of channels
          %  s = irisFetch.Channels(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
@@ -717,7 +756,7 @@ classdef irisFetch
             'datetick;'
             ' '
             '% next, get some station data (same data, at different levels of detail'
-            'n = irisFetch.Networks(''Response'',''IU'',''ANMO'','''',''BHZ'')';
+            'n = irisFetch.Networks(''Response'',''IU'',''ANMO'','''',''BHZ'',''baseurl'',''http://service.iris.edu/fdsnwsbeta/station/1/'')';
             's = irisFetch.Stations(''Response'',''IU'',''ANMO'','''',''BHZ'')';
             'c = irisFetch.Channels(''Response'',''IU'',''ANMO'','''',''BHZ'')';
             ' '
@@ -971,7 +1010,6 @@ classdef irisFetch
          %irisFetch.convertTraces converts traces from java to a matlab structure
          %   mts = convertTraces(traces) where TRACES a java trace class. If the input
          %   traces are empty, then a 1x0 structure is returned.
-         
          blankSacPZ = struct('units','','constant',[],'poles',[],'zeros',[]);
          
          blankTrace = struct('network','','station','','location',''...
@@ -984,6 +1022,7 @@ classdef irisFetch
             'startTime',0,'endTime',0,'sacpz',blankSacPZ);
          mts=blankTrace;
          if isempty(traces)
+            disp('... since traces is empty, creating an empty structure')
             mts(1) = []; % keep the structure, but force it to be 1x0 trace
          end
          for i = 1:length(traces)
@@ -1038,6 +1077,8 @@ classdef irisFetch
             try
                jsacpz = traces(i).getSacpz();
             catch er
+               warning('An [%s] exception occurred in irisFetch.convertTraces() but was caught\n full text follows', er.identifier) %db
+               disp(er);
                if strcmp(er.identifier,'MATLAB:noSuchMethodOrField')
                   warning('IRISFETCH:convertTraces:noGetSacPZmethod',...
                      'probably using older verision of the ws-library. please retrieve the latest version');
@@ -1698,10 +1739,17 @@ classdef irisFetch
                s.Response                = irisFetch.parse(value.getResponse());    % get edu.iris.dmc.fdsn.station.model.Response
                % take the instrument sensitivity. These values are the INPUT units, which
                % matches previous irisFetch
-               s.SensitivityFrequency= s.Response.InstrumentSensitivity.Frequency;
-               s.SensitivityUnitDescription = s.Response.InstrumentSensitivity.InputUnits{2};
-               s.SensitivityUnits = s.Response.InstrumentSensitivity.InputUnits{1};
-               s.SensitivityValue = s.Response.InstrumentSensitivity.Value;
+               if isstruct(s.Response.InstrumentSensitivity)
+                  s.SensitivityFrequency= s.Response.InstrumentSensitivity.Frequency;
+                  s.SensitivityUnitDescription = s.Response.InstrumentSensitivity.InputUnits{2};
+                  s.SensitivityUnits = s.Response.InstrumentSensitivity.InputUnits{1};
+                  s.SensitivityValue = s.Response.InstrumentSensitivity.Value;
+               else
+                  s.SensitivityFrequency = NaN;
+                  s.SensitivityUnitDescription = '';
+                  s.SensitivityUnits = '';
+                  s.SensitivityValue = NaN;
+               end
                
                s.Equipment               = irisFetch.parse(value.getEquipment());   % get edu.iris.dmc.fdsn.station.model.Equipment
                s.SampleRateRatio         = irisFetch.parse(value.getSampleRateRatio()); % get edu.iris.dmc.fdsn.station.model.SampleRateRatioType
