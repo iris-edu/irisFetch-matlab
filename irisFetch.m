@@ -57,7 +57,7 @@ classdef irisFetch
    properties (Constant = true)
       VERSION           = '2.0.3';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
-      MIN_JAR_VERSION   = '2.0.2'; % minimum version of IRIS-WS jar required for compatibility
+      MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
       
       VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
       DEFAULT_QUALITY   = 'B'; % default Quality for Traces
