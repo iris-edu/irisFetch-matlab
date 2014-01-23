@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.3';  % irisFetch version number
+      VERSION           = '2.0.4';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -314,10 +314,10 @@ classdef irisFetch
             
             function resetWaveformURL()
                serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
-               servicedbs = serviceManagerdb.getStationService('http://service.iris.edu/fdsnwsbeta/station/1/')
-               servicedb = serviceManagerdb.getWaveformService('http://service.iris.edu/fdsnwsbeta/dataselect/1/');               
+               servicedbs = serviceManagerdb.getStationService('http://service.iris.edu/fdsnws/station/1/')
+               servicedb = serviceManagerdb.getWaveformService('http://service.iris.edu/fdsnws/dataselect/1/');               
                tracedata =  edu.iris.dmc.extensions.fetch.TraceData();
-               tracedata.setWAVEFORM_URL('http://service.iris.edu/fdsnwsbeta/dataselect/1/')
+               tracedata.setWAVEFORM_URL('http://service.iris.edu/fdsnws/dataselect/1/')
             end
             
       function [channelStructure, urlParams] = Channels(detailLevel, varargin)
@@ -756,7 +756,7 @@ classdef irisFetch
             'datetick;'
             ' '
             '% next, get some station data (same data, at different levels of detail'
-            'n = irisFetch.Networks(''Response'',''IU'',''ANMO'','''',''BHZ'',''baseurl'',''http://service.iris.edu/fdsnwsbeta/station/1/'')';
+            'n = irisFetch.Networks(''Response'',''IU'',''ANMO'','''',''BHZ'',''baseurl'',''http://service.iris.edu/fdsnws/station/1/'')';
             's = irisFetch.Stations(''Response'',''IU'',''ANMO'','''',''BHZ'')';
             'c = irisFetch.Channels(''Response'',''IU'',''ANMO'','''',''BHZ'')';
             ' '
