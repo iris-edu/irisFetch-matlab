@@ -263,9 +263,10 @@ classdef irisFetch
                   fprintf('tracedata.fetchTraces successfully completed, resulting in %d traces before converting\n', numel(traces)); %db
                end
             catch je
-               warning('An [%s] exception occurred in irisFetch.getTheTraces() but was caught\n full text follows:\nmessage:\n%s\n\n', je.identifier,je.message) %db
-               disp(je.cause); %db
-               disp(je.stack); %db
+               % Debug messages:
+               %warning('An [%s] exception occurred in irisFetch.getTheTraces() but was caught\n full text follows:\nmessage:\n%s\n\n', je.identifier,je.message) %db
+               %disp(je.cause); %db
+               %disp(je.stack); %db
                
                switch je.identifier
                   case 'MATLAB:Java:GenericException'
