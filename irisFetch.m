@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.4';  % irisFetch version number
+      VERSION           = '2.0.5';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -182,7 +182,13 @@ classdef irisFetch
          tracedata      = edu.iris.dmc.extensions.fetch.TraceData();
          tracedata.setAppName(irisFetch.appName);
          tracedata.setVerbosity(verbosity);
-         if ~isempty(newbase); tracedata.setBASE_URL(newbase);end;
+         if ~isempty(newbase)
+            if (verbosity)
+                fprintf ('Using services at base: %s\n', newbase);
+            end
+            tracedata.setBASE_URL(newbase);
+         end
+
          getTheTraces();
          
          return
@@ -219,7 +225,7 @@ classdef irisFetch
                               newbase = param;
                            else
                            error('IRISFETCH:Trace:unrecognizedParameter',...
-                              'The text you included as an optional parameter did not parse to either a qualitytype (D,R,Q,M,B) or ''INCLUDEPZ'' or ''VERBOSE''');
+                              'The text you included as an optional parameter did not parse to either a qualitytype (D,R,Q,M,B) or ''INCLUDEPZ'' or ''VERBOSE'' or a service base URL');
                            end
                      end
                      %case 'logical' DEPRECATED
@@ -238,11 +244,6 @@ classdef irisFetch
          
          function getTheTraces()
             traces=[];
-            if verbosity
-               irisFetch.resetWaveformURL();
-               irisFetch.tellMeTheWaveformURL();
-               irisFetch.tellMeTheStationURL();
-            end
             try
                if authorize
                   if verbosity
@@ -298,29 +299,6 @@ classdef irisFetch
          end %function getTheTraces
       end % Traces
       
-      
-            function tellMeTheWaveformURL()
-               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
-               servicedb=serviceManagerdb.getWaveformService();
-               fprintf('the waveform service url is: [%s]\n',char(servicedb.getBaseUrl));
-               pause(1)
-            end
-            
-            function tellMeTheStationURL()
-               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
-               servicedb=serviceManagerdb.getStationService();
-               fprintf('the station service url is: [%s]\n',char(servicedb.getBaseUrl));
-               pause(1)
-            end
-            
-            function resetWaveformURL()
-               serviceManagerdb = edu.iris.dmc.service.ServiceUtil.getInstance();
-               servicedbs = serviceManagerdb.getStationService('http://service.iris.edu/fdsnws/station/1/')
-               servicedb = serviceManagerdb.getWaveformService('http://service.iris.edu/fdsnws/dataselect/1/');               
-               tracedata =  edu.iris.dmc.extensions.fetch.TraceData();
-               tracedata.setWAVEFORM_URL('http://service.iris.edu/fdsnws/dataselect/1/')
-            end
-            
       function [channelStructure, urlParams] = Channels(detailLevel, varargin)
          %irisFetch.Channels retrieves station metadata from IRIS-DMC as an array of channels
          %  s = irisFetch.Channels(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
@@ -547,7 +525,6 @@ classdef irisFetch
          function pv = parameterValues()
             pv = varargin(2:2:end);
          end
-         
          
          function setCriteria()
             crit = edu.iris.dmc.criteria.StationCriteria;
