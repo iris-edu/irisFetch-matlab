@@ -1074,7 +1074,7 @@ classdef irisFetch
                    sacpz.poles   = [];
                end
                if ( not(traces(i).getSacpz().getZeros().isEmpty()) )
-                   sacpz.zeros       = irisFetch.jArrayList2complex(traces(i).getSacpz().getZeros());
+                   sacpz.zeros   = irisFetch.jArrayList2complex(traces(i).getSacpz().getZeros());
                else
                    sacpz.zeros   = [];
                end
