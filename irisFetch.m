@@ -31,7 +31,7 @@ classdef irisFetch
    
    % Celso Reyes, Rich Karstens
    % IRIS-DMC
-   % JUNE 2013
+   % February 2014
    
    %{
  *******************************************************************************
@@ -55,7 +55,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.5';  % irisFetch version number
+      VERSION           = '2.0.6';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -1068,8 +1068,16 @@ classdef irisFetch
             if ~isempty(jsacpz)
                sacpz.units       = char(traces(i).getSacpz().getInputUnit());
                sacpz.constant    = traces(i).getSacpz().getConstant();
-               sacpz.poles       = irisFetch.jArrayList2complex(traces(i).getSacpz().getPoles());
-               sacpz.zeros       = irisFetch.jArrayList2complex(traces(i).getSacpz().getZeros());
+               if ( not(traces(i).getSacpz().getPoles().isEmpty()) )
+                   sacpz.poles   = irisFetch.jArrayList2complex(traces(i).getSacpz().getPoles());
+               else
+                   sacpz.poles   = [];
+               end
+               if ( not(traces(i).getSacpz().getZeros().isEmpty()) )
+                   sacpz.zeros       = irisFetch.jArrayList2complex(traces(i).getSacpz().getZeros());
+               else
+                   sacpz.zeros   = [];
+               end
                mt.sacpz          = sacpz;
             end
             mts(i) = mt;
