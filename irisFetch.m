@@ -2800,11 +2800,11 @@ function [M, argType] = getSetters(obj)
             
             % K8: 8 character field
             K8.outClass = 'char'; K8.nBytes = 4;
-            K8.defaultValue = '-12345..';
+            K8.defaultValue = '-12345  ';
             
             % K16: 16 character field
             K16.outClass = 'char'; K16.nBytes = 8;
-            K16.defaultValue = '-12345..........';
+            K16.defaultValue = '-12345          ';
             
             % L: Logical field, but stored as 32byte INT on disk
             L.outClass ='int32'; L.nBytes = 4;
