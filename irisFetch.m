@@ -6,7 +6,7 @@ classdef irisFetch
    %
    % irisFetch waveform retrieval Methods:
    %    Traces - retrieve sac-equivalent waveforms with channel metadata
-   %    Sacfiles - as Traces above, but saves directly to a SAC file.
+   %    SACfiles - as Traces above, but saves directly to a SAC file.
    %
    % irisFetch FDSN station webservice Methods:
    %    Channels - retrieve metadata as an array of channels
@@ -136,13 +136,19 @@ classdef irisFetch
       
       %% TRACE/DATASELECT related STATIC, PUBLIC routines
       
-      function Sacfiles(network, station, location, channel, startDate, endDate, writeDirectory, varargin)
-         %irisFetch.Sacfiles retrieves waveform data into sac files
-         % note that the writeDirectory is required. If empty then
-         % current directory is used. If the writeDirectory does not exist,
-         % then it will be created.
+      function SACfiles(network, station, location, channel, startDate, endDate, writeDirectory, varargin)
+         % irisFetch.SACfiles(network, station, location, channel, startDate, endDate, writeDirectory,...)
+         %   As with irisFetch.Traces, but waveform data will be written out as SAC files
+         %   to a directory specified by 'writeDirectory'
          %
-         % see irisFetch.Traces
+         %   The 'writeDirectory' parameter is mandatory. If 'writeDirectory' does not exist, then
+         %   it will be created.
+         %
+         %   NOTE: unlike the Traces method, no structures will be saved in your MATLAB workspace
+         %   if this method is used.
+         %
+         %   see irisFetch.Traces for more information on specifying channel identifier inputs
+         
          irisFetch.Traces(network, station, location, channel, startDate, endDate, ['WRITESAC:', writeDirectory], 'ASJAVA', varargin{:});
       end
       
@@ -185,6 +191,11 @@ classdef irisFetch
          %  example, the IRIS datacenter would be 'http://service.iris.edu/'. These
          %  settings are "sticky", so that all calls for waveform data or station metadata
          %  will go to that datacenter until a new one is specified.
+         %
+         %  tr = irisFetch.Traces(..., 'WRITESAC:writeDir') will retrieve seismic traces
+         %  and then write a SAC file to the directory specified by 'writeDir' for each
+         %  trace structure. This method will also store the retrieved waveform data in
+         %  the MATLAB workspace.
          %
          %  ABOUT THE RETURNED TRACE
          %    The returned trace(s) will be a 1xN array of structs. Each struct contains
