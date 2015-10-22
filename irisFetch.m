@@ -2293,8 +2293,12 @@ function [M, argType] = getSetters(obj)
              end
              cd(fileDirectory)
              fileNames = dir('*.SAC');
-         elseif  ~isempty(strfind(fileDirectory,'*')) || ~isempty(strfind(fileDirectory,'?')) % ..for wildcards..
-             fileNames = dir([fileDirectory '*.SAC']);
+         elseif  logical(strfind(fileDirectory,'*')) | ~isempty(strfind(fileDirectory,'?')) % ..for wildcards..
+             if strcmpi(fileDirectory,'*.SAC')
+                 fileNames = dir(fileDirectory); 
+             else
+                 fileNames = dir([fileDirectory '*.SAC']);
+             end
          else
              error(['IRISFETCH:read_sac_in - ' fileDirectory ' not a valid file or directory'])
          end
@@ -2352,15 +2356,30 @@ function [M, argType] = getSetters(obj)
              end
          end  % END make_sac_header
          
-         blanksacPZ = struct('units',[],'constant',[],'poles',[],'zeros',[]);
-         tr_out = repmat(struct('network',[],'station',[],'location',[],...
-             'channel',[],'quality',[],'latitude',nan,'longitude',nan,...
-             'elevation',nan,'depth',nan,'azimuth',nan,'dip',nan,...
-             'sensitivity',nan,'sensitivityFrequency',nan,...
-             'instrument',[],'sensitivityUnits',[],...
-             'data',[],'sampleCount',nan,'sampleRate',[],...
-             'startTime',nan,'endTime',nan,'sacpz',blanksacPZ),numel(fileNames),1);
-                  
+         blanksacPZ = struct('units','','constant',[],'poles',[],'zeros',[]);
+         tr_out = repmat(struct('network','','station','','location','',...
+             'channel','','quality','','latitude',[],'longitude',[],...
+             'elevation',[],'depth',[],'azimuth',[],'dip',[],...
+             'sensitivity',[],'sensitivityFrequency',[],'instrument','',...
+             'sensitivityUnits','','data',[],'sampleCount',[],'sampleRate',[],...
+             'startTime',[],'endTime',[],'sacpz',blanksacPZ),numel(fileNames),1);
+         
+          function trace_out = format_blank_fields(trace_in)
+             % Determines if the fields of a given Trace structure contain
+             %   default SAC values and formats them as NaN for numeric fields
+             %   and empty arrays for alpha-numeric fields.
+             
+             names = fieldnames(trace_in);
+             for ii = 1:numel(names)
+                 if isnumeric(trace_in.(names{ii})) & trace_in.(names{ii})==-12345
+                     trace_in.(names{ii}) = [];
+                 elseif ischar(trace_in.(names{ii})) & ~isempty(strfind(trace_in.(names{ii}),'-12345'))
+                     trace_in.(names{ii}) = [];
+                 end
+             end
+             trace_out = trace_in;
+          end
+          
          % Loop over filenames
          for i=1:numel(fileNames)
              % Assumes little-endian formatting at first, but tries
@@ -2406,23 +2425,24 @@ function [M, argType] = getSetters(obj)
                 tr_out(i).station       = sac.KSTNM;
                 tr_out(i).location      = sac.KHOLE;
                 tr_out(i).channel       = sac.KCMPNM;
-                tr_out(i).quality       = [];
+                tr_out(i).quality       = '';  % No SAC equivalent
                 tr_out(i).latitude      = sac.STLA;
                 tr_out(i).longitude     = sac.STLO;
                 tr_out(i).elevation     = sac.STEL;
                 tr_out(i).depth         = sac.STDP;
                 tr_out(i).azimuth       = sac.CMPAZ;
                 tr_out(i).dip           = sac.CMPINC;
-                tr_out(i).sensitivity   = [];
-                tr_out(i).sensitivityFrequency  = [];
+                tr_out(i).sensitivity   = [];  % No SAC equivalent
+                tr_out(i).sensitivityFrequency  = [];  % No SAC equivalent
                 tr_out(i).instrument    = sac.KINST;
-                tr_out(i).sensitivityUnits      = [];
+                tr_out(i).sensitivityUnits      = '';  % No SAC equivalent
                 tr_out(i).data =        hd;
                 tr_out(i).sampleCount = sac.NPTS;
-                tr_out(i).sampleRate =  sac.DELTA;
+                tr_out(i).sampleRate =  1/sac.DELTA;
                 tr_out(i).startTime =   datenum(date_str,'yyyy-dd-HH:MM:SS.FFF');
                 tr_out(i).endTime =     tr_out(i).startTime + sac.NPTS*sac.DELTA/86400;
-                tr_out(i).sacpz =       [];
+                tr_out(i).sacpz =       tr_out(i).sacpz;
+                tr_out(i) = format_blank_fields(tr_out(i));
              end
          end
       end
@@ -2527,7 +2547,7 @@ function [M, argType] = getSetters(obj)
                write_sac_field(fid, 'IFTYPE', ITIME);
                
                write_sac_field(fid, 'LEVEN', true); % evenly spaced data
-               write_sac_field(fid, 'DELTA', javaTrace.getSampleRate()); % ODELTA would have observed change...
+               write_sac_field(fid, 'DELTA', 1/javaTrace.getSampleRate()); % ODELTA would have observed change...
                if SET_SYNTHETIC_FLAG
                   write_sac_field(fid, 'ISYNTH', ...
                      isSynth(char(javaTrace.getNetwork()), ...
@@ -2565,7 +2585,7 @@ function [M, argType] = getSetters(obj)
                write_sac_field(fid, 'IFTYPE', ITIME);
                
                write_sac_field(fid, 'LEVEN', true); % evenly spaced data
-               write_sac_field(fid, 'DELTA', javaTrace.sampleRate); % ODELTA would have observed change...
+               write_sac_field(fid, 'DELTA', 1/javaTrace.sampleRate); % ODELTA would have observed change...
                if SET_SYNTHETIC_FLAG
                   write_sac_field(fid, 'ISYNTH', ...
                      isSynth(javaTrace.network, ...
