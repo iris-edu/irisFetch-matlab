@@ -59,7 +59,7 @@ classdef irisFetch
    %}
    
    properties (Constant = true)
-      VERSION           = '2.0.7';  % irisFetch version number
+      VERSION           = '2.0.8';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
       
@@ -268,15 +268,20 @@ classdef irisFetch
          
          opts = setOptions(varargin);
          dbPrint = irisFetch.getDBfprintf(opts.verbosity);
-         % startDateStr   = irisFetch.makeDateStr(startDate);
-         % endDateStr     = irisFetch.makeDateStr(endDate);
          location       = safeLocation(location);
          
          tracedata      = edu.iris.dmc.extensions.fetch.TraceData();
          tracedata.setAppName(irisFetch.appName);
          tracedata.setVerbosity(opts.verbosity);
-         tracedata = setBaseUrl(tracedata, opts.newbase);
          
+         if ~isempty(opts.newbase)
+             if strcmp(opts.newbase(end),'/')
+                 opts.newbase = opts.newbase(1:end-1);
+             end
+             tracedata.setBASE_URL(opts.newbase);
+             dbPrint('Using services at base: %s\n', opts.newbase);
+         end
+             
          if ~opts.useFederator
             ts = getTheTraces(network, station, location, channel, startDate, endDate, opts);
          else
@@ -288,12 +293,6 @@ classdef irisFetch
          % ---------------------------------------------------------------
          % END TRACES: MAIN
          % ===============================================================
-         function td = setBaseUrl(td, newbase)
-            if ~isempty(newbase)
-               if newbase(end) ~= '/'; newbase = [newbase, '/']; end
-               dbPrint ('Using services at base: %s\n', newbase);
-            end
-         end
          
          function [svc, url, mykey] = parseFederatedHeaderLine(A)
             [svc,A] = splitString(A,'=');
@@ -344,12 +343,12 @@ classdef irisFetch
                         newDataCenter, url)
                   end
                   switch svc
-                     case 'DATASELECTSERVICE'
-                        tracedata.setWAVEFORM_URL(url)
-                     case 'SACPZSERVICE'
-                        tracedata.setSACPZ_URL(url)
-                     case 'STATIONSERVICE'
-                        tracedata.setSTATION_URL(url)
+                      case 'DATASELECTSERVICE'
+                         tracedata.setWAVEFORM_URL(url)
+%                       case 'SACPZSERVICE' % 
+%                          tracedata.setSACPZ_URL(url)
+                      case 'STATIONSERVICE'
+                         tracedata.setSTATION_URL(url)
                   end
                   dbPrint('[%s] : %-10s > %s\n',currDataCenter, svc, url');
                else
@@ -499,7 +498,7 @@ classdef irisFetch
                ts = irisFetch.convertTraces(traces);
             else
                ts = traces;
-               warning('in-house experimental: returning the java traces instead of a matlab struct.');
+               % warning('in-house experimental: returning the java traces instead of a matlab struct.');
             end
             clear traces
             
@@ -823,7 +822,6 @@ classdef irisFetch
          %      specialized request parameters.
          
          import edu.iris.dmc.*
-         % import edu.iris.dmc.*
          
          %if ~exist('edu.iris.dmc.criteria.EventCriteria','class')
          if ~exist('criteria.EventCriteria','class')
@@ -2705,17 +2703,17 @@ function [M, argType] = getSetters(obj)
                error('irisFetch:Traces:unableToWriteFile',...
                   'Unable to write to file: [%s]',outputFileName);
             end
-            dbPrint('WRITING TRACE.... to FID: %d\n', fid)
-            dbPrint('  Writing Default Header\n')
+            dbPrint('WRITING TRACE.... to: %s\n', outputFileName)
+            dbPrint('  Writing Default Header')
             write_default_sac_header(fid)
             % WRITE SAC FIELDS
-            dbPrint('  Modifying with actual values\n')
+            dbPrint('  Modifying with actual values')
             write_trace_header_to_sac(fid, trace)
             
             % WRITE DATA
-            dbPrint('  Writing data values\n')
+            dbPrint('  Writing data values')
             write_sac_data_values(fid, trace)
-            dbPrint('  CLOSING\n')
+            dbPrint('  CLOSING')
             fclose(fid);
             
             function name = outputname_from_trace()
