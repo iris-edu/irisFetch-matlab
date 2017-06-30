@@ -1,5 +1,5 @@
 classdef irisFetch
-    
+
    % IRISFETCH allows seamless access to data stored within the IRIS-DMC via FDSN services
    %
    % irisFetch Methods:
@@ -22,7 +22,7 @@ classdef irisFetch
    %    connectToJar - attempt to connect to the required IRIS-WS JAR file
    %    runExamples - displays and runs some sample queries to the web service
    %    Trace2SAC - writes a trace structure to a SAC file
-   %    SAC2Trace - reads one or more locally stored SAC files to a trace structure 
+   %    SAC2Trace - reads one or more locally stored SAC files to a trace structure
    %
    %  irisFetch requires version 2.0 or greater of the IRIS Web Services Library java jar
    %  for more details, click on 'connectToJar' above.
@@ -31,12 +31,12 @@ classdef irisFetch
    %  the online manual http://www.iris.edu/dms/nodes/dmc/software/downloads/irisFetch.m/.
    %
    %see also JAVAADDPATH
-   
-   
+
+
    % Celso Reyes, Rich Karstens
    % IRIS-DMC
    % February 2014
-   
+
    %{
  *******************************************************************************
  * Copyright (c) 2013 IRIS DMC supported by the National Science Foundation.
@@ -57,22 +57,22 @@ classdef irisFetch
  * <http://www.gnu.org/licenses/>.
  ******************************************************************************
    %}
-   
+
    properties (Constant = true)
       VERSION           = '2.0.8';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
       MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
-      
+
       VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
       DEFAULT_QUALITY   = 'B'; % default Quality for Traces
       FETCHER_LIST      = {'Traces','Stations','Events','Resp'}; % list of functions that fetch
       forceDataAsDouble = true; %require that traces are returned as doubles regardless of original format
    end %constant properties
-   
+
    properties (Constant = true, Hidden = true)
       MS_IN_DAY         = 86400000; % milliseconds in day
       BASE_DATENUM      = 719529; % Matlab startdate=0000-Jan-1 vs java's startdate=1970-Jan-1
-      
+
       SURROGATE_JAR     = 'http://www.iris.edu/files/IRIS-WS/2/IRIS-WS-2.0-latest.jar';
       M2J_MAP           = containers.Map (...
          {'java.util.Date',...
@@ -94,12 +94,12 @@ classdef irisFetch
       FEDERATOR_BASEURL = 'http://service.iris.edu/irisws/fedcatalog/1/';
       FEDERATOR_LABELS = {'DATACENTER','RESPSERVICE','EVENTSERVICE','STATIONSERVICE','DATASELECTSERVICE','SACPZSERVICE'};
    end %hidden constant properties
-   
+
    methods(Static)
       function v = version()
          v = irisFetch.VERSION;
       end
-      
+
       function Trace2SAC(traces, writeDirectory, verbosity)
          % irisFetch.Trace2SAC(traces, writeDirectory)
          %
@@ -109,13 +109,13 @@ classdef irisFetch
          %   INPUTS
          %     traces: the Traces struct for writting to SAC file(s).
          %     writeDirectory: name of output directory
-         
+
          if ~exist('verbosity','var')
             verbosity = false;
          end
          irisFetch.write_sac_out(writeDirectory, traces, verbosity);
       end
-      
+
       function tr = SAC2Trace(file_dir_name)
           % tr = irisFetch.SAC2Trace(file_dir_name)
           %
@@ -130,12 +130,12 @@ classdef irisFetch
           %
           %   OUTPUTS
           %     tr: Trace structure, as returned by irisFetch.Traces
-          
+
           tr = irisFetch.read_sac_in(file_dir_name);
       end
-      
+
       %% TRACE/DATASELECT related STATIC, PUBLIC routines
-      
+
       function SACfiles(network, station, location, channel, startDate, endDate, writeDirectory, varargin)
          % irisFetch.SACfiles(network, station, location, channel, startDate, endDate, writeDirectory,...)
          %   As with irisFetch.Traces, but waveform data will be written out as SAC files
@@ -148,11 +148,11 @@ classdef irisFetch
          %   if this method is used.
          %
          %   see irisFetch.Traces for more information on specifying channel identifier inputs
-         
+
          irisFetch.Traces(network, station, location, channel, startDate, endDate, ['WRITESAC:', writeDirectory], 'ASJAVA', varargin{:});
       end
-      
-      
+
+
       function ts = Traces(network, station, location, channel, startDate, endDate, varargin )
          %irisFetch.Traces retrieves sac-equivalent waveform with channel metadata
          %  tr = irisFetch.Traces(network, station, location, channel, startDate, endDate)
@@ -254,26 +254,26 @@ classdef irisFetch
          %      ts = irisFetch.Traces('IU','ANMO,ANTO,YSS','00','*','2010-02-27 06:30:00','2010-02-27 10:30:00')
          %
          %  SEE ALSO datestr
-         
-         
+
+
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class')
             irisFetch.connectToJar()
          end
-         
+
          import edu.iris.dmc.*
-         
+
          safeLocation = @(x) strrep(x,' ','-');
          str2webdate = @(x) strrep(x,' ', 'T'); % 'YYYY-MM-DD hh:mm:ss' -> 'YYYY-MM-DDThh:mm:ss'
          web2strdate = @(x) strrep(x,'T',' ');
-         
+
          opts = setOptions(varargin);
          dbPrint = irisFetch.getDBfprintf(opts.verbosity);
          location       = safeLocation(location);
-         
+
          tracedata      = edu.iris.dmc.extensions.fetch.TraceData();
          tracedata.setAppName(irisFetch.appName);
          tracedata.setVerbosity(opts.verbosity);
-         
+
          if ~isempty(opts.newbase)
              if strcmp(opts.newbase(end),'/')
                  opts.newbase = opts.newbase(1:end-1);
@@ -281,19 +281,19 @@ classdef irisFetch
              tracedata.setBASE_URL(opts.newbase);
              dbPrint('Using services at base: %s\n', opts.newbase);
          end
-             
+
          if ~opts.useFederator
             ts = getTheTraces(network, station, location, channel, startDate, endDate, opts);
          else
             ts = getResultsFromFederator(network, station, location, channel, startDate, endDate, opts);
          end
-         
+
          return
-         
+
          % ---------------------------------------------------------------
          % END TRACES: MAIN
          % ===============================================================
-         
+
          function [svc, url, mykey] = parseFederatedHeaderLine(A)
             [svc,A] = splitString(A,'=');
             assert(ismember(svc, irisFetch.FEDERATOR_LABELS), '%s isn''t a known label\n',svc);
@@ -305,14 +305,14 @@ classdef irisFetch
                   url = A;
             end
          end
-         
+
          function [s1, s2] = splitString(s, tok)
             [s1, s2] = strtok(s, tok);
             if ~isempty(s2)
                s2(1)='';
             end
          end
-         
+
          function tracesByDatacenter = getResultsFromFederator(network, station, location, channel, startDateStr, endDateStr, opts)
             tracesByDatacenter = struct;
             stD = str2webdate(irisFetch.makeDateStr(startDateStr));
@@ -325,11 +325,11 @@ classdef irisFetch
             dbPrint('%d Bytes\n',numel(fedResults));
             dbPrint(fedResults)
             assignin('base','fedResults',fedResults);
-            
+
             a = textscan(fedResults, '%s %s %s %s %s %s');
             nets = a{1}; stas = a{2}; locs = a{3}; chas = a{4};
             stts = a{5}; edts = a{6};
-            
+
             isHeader = cellfun(@isempty, stas);
             starttimer = tic;
             dstic = [];
@@ -345,7 +345,7 @@ classdef irisFetch
                   switch svc
                       case 'DATASELECTSERVICE'
                          tracedata.setWAVEFORM_URL(url)
-%                       case 'SACPZSERVICE' % 
+%                       case 'SACPZSERVICE' %
 %                          tracedata.setSACPZ_URL(url)
                       case 'STATIONSERVICE'
                          tracedata.setSTATION_URL(url)
@@ -381,12 +381,12 @@ classdef irisFetch
                dstic = tic;
             end
          end
-         
+
          function opts = getUserOptions(opts, argList)
             % extracts getsacpz, verbosity, authorize, quality, username, and userpwd
             % Parameters are handled "intelligently" so that [paramname, paramval] pairs
             % aren't necessry
-            
+
             for n=1:numel(argList)
                param = argList{n};
                switch class(param)
@@ -413,7 +413,7 @@ classdef irisFetch
                         case {irisFetch.FEDERATOR_TRIGGER}
                            opts.useFederator = true;
                         otherwise
-                           
+
                            if length(param)>7 && strcmpi(param(1:7),'http://')
                               % set the bases
                               opts.newbase = param;
@@ -435,14 +435,14 @@ classdef irisFetch
                      error('IRISFETCH:Trace:unrecognizedParameter',...
                         'The optional parameter wasn''t recognized. %s', class(param));
                end
-            end            
+            end
             if opts.verbosity %cannot use dbPrint here, because this function gets called BEFORE dbPrint declared
                disp({'spz:',opts.getsacpz,'vb:',opts.verbosity,...
                'auth:',opts.authorize,'qual:',opts.quality,...
                'un&pw:',opts.username,repmat('*',size(opts.userpwd))});
             end
          end % extractAdditionalArguments
-         
+
          function ts = getTheTraces(N, S, L, C, startDateStr, endDateStr, opts)
             traces=[];
             startDateStr = irisFetch.makeDateStr(startDateStr);
@@ -465,7 +465,7 @@ classdef irisFetch
                dbPrint('An [%s] exception occurred in irisFetch.getTheTraces() but was caught\n full text follows:\nmessage:\n%s\n\n', je.identifier,je.message) %db
                %disp(je.cause); %db
                %disp(je.stack); %db
-               
+
                switch je.identifier
                   case 'MATLAB:Java:GenericException'
                      if any(strfind(je.message,'URLNotFoundException'));
@@ -489,11 +489,11 @@ classdef irisFetch
                      rethrow(je)
                end
             end
-            
+
             if opts.saveSAC
                irisFetch.write_sac_out(opts.writeDirectory, traces, opts.verbosity);
             end
-            
+
             if opts.convertToMatlab
                ts = irisFetch.convertTraces(traces);
             else
@@ -501,7 +501,7 @@ classdef irisFetch
                % warning('in-house experimental: returning the java traces instead of a matlab struct.');
             end
             clear traces
-            
+
          end %function getTheTraces
          function opts = setOptions(args)
             opts.getsacpz    = false;
@@ -518,7 +518,7 @@ classdef irisFetch
             opts = getUserOptions(opts, args);
          end
       end % Traces
-      
+
       %% STATION related STATIC, PUBLIC routines
       function [channelStructure, urlParams] = Channels(detailLevel, varargin)
          %irisFetch.Channels retrieves station metadata from IRIS-DMC as an array of channels
@@ -547,7 +547,7 @@ classdef irisFetch
          %  Note: This function effectively deprecates irisFetch.flattenToChannel
          %
          %See also Networks, Stations
-         
+
          if isempty(detailLevel)
             detailLevel = 'CHANNEL';
          end
@@ -558,7 +558,7 @@ classdef irisFetch
             channelStructure = irisFetch.flattenToChannel(channelStructure);
          end
       end
-      
+
       function [stationStructure, urlParams] = Stations(detailLevel, varargin)
          %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of stations
          %  s = irisFetch.Stations(DETAIL,NETWORK,STATION,LOCATION,CHANNEL) retrieves
@@ -588,7 +588,7 @@ classdef irisFetch
          %  Note: This function effectively deprecates the irisFetch.flattenToStation
          %
          %See also Networks, Channels
-         
+
          if isempty(detailLevel)
             detailLevel = 'STATION';
          end
@@ -599,7 +599,7 @@ classdef irisFetch
             stationStructure = irisFetch.flattenToStation(stationStructure);
          end
       end
-      
+
       function [networkStructure, urlParams] = Networks(detailLevel, network, station, location, channel, varargin)
          %irisFetch.Stations retrieves station metadata from IRIS-DMC as an array of networks
          %  s = irisFetch.Networks(DETAIL,NETWORK,STATION,LOCATION,CHANNEL), retrieves
@@ -654,32 +654,32 @@ classdef irisFetch
          service      = []; % will be a java service object
          crit         = []; % will be a java criteria object
          j_networks   = []; % will be the returned java networks
-         
+
          %if ~exist('edu.iris.dmc.criteria.StationCriteria','class')
          if ~exist('criteria.StationCriteria','class')
             irisFetch.connectToJar()
          end
-         
+
          if isempty(detailLevel)
             detailLevel = 'NETWORK';
          end
-         
+
          verifyArguments(nargin);
          setOutputLevel();
          connectToStationService();
          setCriteria();
          fetchTheStations();
          networkStructure=irisFetch.parser_for_IRIS_WS_2_0_0(j_networks);
-         
+
          if nargout == 2
             urlParams = crit.toUrlParams;
          end
          return
-         
+
          % -------------------------------------------------------------
          % END STATIONS: MAIN
          % =============================================================
-         
+
          function verifyArguments(nArgs)
             if nArgs==1 && strcmpi(detailLevel,'help')
                disp('HELP request recognized, but not implemented');
@@ -688,7 +688,7 @@ classdef irisFetch
                error('not enough arguments.%d',nArgs);
             end
          end %verifyArguments
-         
+
          function setOutputLevel()
             try
                outputLevel = edu.iris.dmc.criteria.OutputLevel.(upper(detailLevel));
@@ -707,14 +707,14 @@ classdef irisFetch
                end
             end
          end % setOutputLevel
-         
+
          function connectToStationService()
             serviceManager = edu.iris.dmc.service.ServiceUtil.getInstance();
             serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()])
             setBaseUrlFromParameterList();
             removeParameter('BASEURL');
             return
-            
+
             % - - - - - - - - - - - - - - -
             function setBaseUrlFromParameterList()
                baseUrl = getParameter('BASEURL');
@@ -724,45 +724,45 @@ classdef irisFetch
                   service = serviceManager.getStationService();
                end % setBaseUrlFromParameterList
             end
-            
+
          end %connectToStationService()
-         
+
          function removeParameter(s)
             [UNUSED_VARIABLE, idx] = getParameter(s); %#ok<ASGLU>
             varargin(idx * 2 -1 : idx* 2) = [];
          end
-         
+
          function [p, i] = getParameter(s)
             i = find(strcmpi(parameterNames(),s),1,'first');
             p = parameterValues();
             p = p(i);
          end
-         
+
          function pn = parameterNames()
             pn = varargin(1:2:end);
          end
-         
+
          function pv = parameterValues()
             pv = varargin(2:2:end);
          end
-         
+
          function setCriteria()
             crit = edu.iris.dmc.criteria.StationCriteria;
             %crit = edu.iris.dmc.criteria.StationCriteria;
-            
+
             %----------------------------------------------------------
             % Deal with the Station/Network/Channel/Location parameters
             % These are treated separately, as they're "add" & not "set"
             % Each may handle multiple strings (as a cell array)
             %----------------------------------------------------------
-            
+
             crit = irisFetch.addCriteria(crit, network, 'addNetwork');
             crit = irisFetch.addCriteria(crit, station, 'addStation');
             crit = irisFetch.addCriteria(crit, location,'addLocation');
             crit = irisFetch.addCriteria(crit, channel, 'addChannel');
             crit = irisFetch.setCriteria(crit, varargin);
          end %setCriteria
-         
+
          function fetchTheStations()
             try
                j_networks = service.fetch(crit, outputLevel);
@@ -778,9 +778,9 @@ classdef irisFetch
                end
             end %catch
          end %fetchTheStations
-         
+
       end %Networks
-      
+
       %% EVENT related STATIC, PUBLIC routines
       function [events, urlParams] = Events(varargin)
          %irisFetch.Events retrieves event data from the IRIS-DMC
@@ -820,31 +820,31 @@ classdef irisFetch
          %NOTE: Any parameter-value pair that is not listed here will be passed along to
          %      the Event Service. this is to accomodate other datacenters that may have
          %      specialized request parameters.
-         
+
          import edu.iris.dmc.*
-         
+
          %if ~exist('edu.iris.dmc.criteria.EventCriteria','class')
          if ~exist('criteria.EventCriteria','class')
             irisFetch.connectToJar()
          end
-         
+
          %serviceManager = ws.service.ServiceUtil.getInstance();
          serviceManager = edu.iris.dmc.service.ServiceUtil.getInstance();
          serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
-         
+
          indexOffsetOfBASEURL=find(strcmpi(varargin(1:2:end),'BASEURL'),1,'first') * 2;
-         
+
          if ~isempty(indexOffsetOfBASEURL)
             baseURL = varargin{indexOffsetOfBASEURL};
          end
-         
+
          if exist('baseURL','var')
             varargin(indexOffsetOfBASEURL-1:indexOffsetOfBASEURL) = [];
             service = serviceManager.getEventService(baseURL);
          else
             service = serviceManager.getEventService();
          end
-         
+
          %crit = ws.criteria.EventCriteria;
          crit = criteria.EventCriteria;
          crit = irisFetch.setCriteria(crit, varargin);
@@ -867,17 +867,17 @@ classdef irisFetch
          events=irisFetch.parser_for_IRIS_WS_2_0_0(j_events);
          % v2.0 uses Preferred, while original code uses "Primary"
       end
-      
-      
+
+
       %% RESPONSE related STATIC, PLUBLIC routines
       function [respstructures, urlparams] = Resp(network, station, location, channel, starttime, endtime)
          % retrieve the RESP information into a character string.
          % net, sta, loc, and cha are all required.
          % channels and locations may be wildcarded using either ? or *
          % starttime and endtime options may be ignored by using [] instead of a time.
-         
+
          import edu.iris.dmc.*
-         
+
          %crit = edu.iris.dmc.criteria.RespCriteria();
          crit = criteria.RespCriteria();
          crit.setNetwork(network);
@@ -891,16 +891,16 @@ classdef irisFetch
             crit.setEndTime(irisFetch.mdate2jdate(endtime));
          end
          urlparams = char(crit.toUrlParams());
-         
+
          serviceManager = edu.iris.dmc.service.ServiceUtil.getInstance();
          baseUrl = 'http://service.iris.edu/irisws/resp/1/';
          serviceManager.setAppName(['MATLAB:irisFetch/' irisFetch.version()]);
          service = serviceManager.getRespService(baseUrl);
          respstructures= char(service.fetch(crit));
       end
-      
+
       %% HELPER ROUTINES
-      
+
       function connectToJar(isSilent)
          %irisFetch.connectToJar connects to the jar for this MATLAB session
          %  irisFetch.connectToJar() searches the javaclasspath for the
@@ -919,28 +919,28 @@ classdef irisFetch
          %  Workspace'.
          %
          % SEE ALSO javaaddpath
-         
+
          assert(usejava('jvm'),'IRISFETCH:jvmNotRunning','irisFetch requires Java to run.');
          isSilent = nargin>0 && strcmpi(isSilent,'silent');
-         
+
          if exist('edu.iris.dmc.extensions.fetch.TraceData','class');
             return
          end
-         
+
          if ~isSilent
             disp('please add the latest IRIS-WS.jar file to your javaclasspath.');
             fprintf('Available here: %s\n',irisFetch.SURROGATE_JAR);
             disp('ex.  javaaddpath(''/usr/local/somewhere/IRIS-WS.jar'');');
          end
-         
+
          javaaddpath(irisFetch.SURROGATE_JAR);
-         
+
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class');
             error('irisFetch:noDefaultJar',...
                'Unable to access the default jar.  Please download and add the latest IRIS-WS-JAR to your javaclasspath.');
          end
       end
-      
+
       function runExamples()
          delay=1; % seconds
          codeToExecute={
@@ -980,12 +980,12 @@ classdef irisFetch
             pause(delay);
          end
          clear traces tr n s c ev
-         
+
       end %fn runExamples
    end % static methods
-   
+
    methods(Static, Hidden=true)
-      
+
       function channelList = flattenToChannel(networkTree)
          %irisFetch.flattenToChannel flattens the structure returned by irisFetch.Networks
          %  flatStruct = irisFetch.flattenToChannel(networkTree) takes the hierarchy
@@ -993,24 +993,24 @@ classdef irisFetch
          %  epochs, technically).
          %
          %  flatStruct is an array containing ALL channel epochs.
-         
+
          assert(isa(networkTree,'struct'),'Cannot Flatten a non-structure');
-         
+
          %eliminate stations that have no channels
          for n=1:numel(networkTree)
             hasNoChannel = arrayfun(@(x) isempty(x.Channels),networkTree(n).Stations);
             networkTree(n).Stations(hasNoChannel) = []; % networkTree(n).Stations(~hasNoChannel);
          end
-         
+
          %eliminate networks that have no stations
          networksWithoutStations = arrayfun(@(x) isempty(x.Stations),networkTree);
          networkTree(networksWithoutStations) = [];
-         
+
          if isempty(networkTree);
             warning('IRISFETCH:flattenToChannel:noValidChannels','No channels found, returning an empty array');
             return
          end
-         
+
          for n=1:numel(networkTree)
             nc    = networkTree(n).NetworkCode;
             nd    = networkTree(n).Description;
@@ -1031,24 +1031,24 @@ classdef irisFetch
          end
          tmp = [networkTree.Stations];
          channelList=[tmp.Channels];
-         
+
          clear tmp
          % now, reorder to make it visually coherent.
          descriptorstuff={'NetworkCode';'StationCode';'LocationCode';'ChannelCode';'NetworkDescription';'StationName';'Site'};
          positionalstuff={'Latitude';'Longitude';'Elevation';'Depth';'Azimuth';'Dip'};
          otherstuff={'SampleRate';'SampleRateRatio';'StartDate';'EndDate'};
          fieldsattop=[descriptorstuff; positionalstuff; otherstuff];
-         
+
          fn = fieldnames(channelList);
          fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
-         
+
          for n=1:numel(fieldsattop);
             fn(strcmp(fn,fieldsattop(n))) = [];
          end
          neworder = [fieldsattop; fn];
          channelList = orderfields(channelList, neworder);
       end
-      
+
       function stationList = flattenToStation(networkTree)
          %irisFetch.flattenToStation flattens the structure returned by irisFetch.Stations
          %
@@ -1057,24 +1057,24 @@ classdef irisFetch
          %
          %This takes the hierarchy returned by irisFetch.Stations, and
          %returns a 1xN array of stations (station epochs, technically).
-         
+
          assert(isa(networkTree,'struct'),'Cannot Flatten a non-structure');
-         
+
          emptyNetworks = arrayfun(@(x) isempty(x.Stations),networkTree);
-         
+
          for n=1:numel(networkTree)
             nc    = networkTree(n).NetworkCode;
             nd    = networkTree(n).Description;
             [networkTree(n).Stations.NetworkCode]        = deal(nc);
             [networkTree(n).Stations.NetworkDescription] = deal(nd);
          end
-         
+
          stationList = [networkTree(~emptyNetworks).Stations];
-         
+
          for m=1:numel(stationList)
             stationList(m).StationName = stationList(m).Site.Name;
          end
-         
+
          % now, reorder to make it visually coherent.
          descriptorstuff={'NetworkCode';'StationCode';'NetworkDescription';'StationName';'Site'};
          positionalstuff={'Latitude';'Longitude';'Elevation'};
@@ -1086,14 +1086,14 @@ classdef irisFetch
          end
          fn = fieldnames(stationList);
          fieldsattop = fieldsattop(ismember(fieldsattop,fn)); %ensure fields exist
-         
+
          for n=1:numel(fieldsattop);
             fn(strcmp(fn,fieldsattop(n))) = [];
          end
          neworder = [fieldsattop; fn];
          stationList = orderfields(stationList, neworder);
       end
-      
+
       function [js, je] = testResp(starttime, endtime)
          n=now;
          testThis('IU','ANMO','00','BHZ',[],[]);
@@ -1114,38 +1114,38 @@ classdef irisFetch
          if exist('endtime','var') && ~isempty(endtime)
             je = showTimeInDetail(endtime);
          end
-         
+
          function testThis(varargin)
             try
                [r, url] = irisFetch.Resp(varargin{:});
                whos r
                disp(['url: ', url]);
-               
+
                parampairs={
                   'network'   ,varargin{1}, 'station'   ,varargin{2}, 'location'  ,varargin{3}, 'channel'   ,varargin{4}
                   };
                disp(paramPairs)
-               
+
                if ~isempty(varargin{5})
                   st = datestr(varargin{5},31);
                   st(11)='T';
                   parampairs = [parampairs, {'starttime',st}];
                end
-               
+
                if ~isempty(varargin{6})
                   ed = datestr(varargin{6},31);
                   ed(11)='T';
                   parampairs = [parampairs, {'endtime',ed}];
                end
-               
+
                [s,~]=urlread('http://service.iris.edu/irisws/resp/1/query','get', parampairs);
-               
+
                assert(strcmp(r,s));
             catch myerror
                warning('RESPTEST:failure',myerror.identifier);
             end
          end
-         
+
          function javadateTime = showTimeInDetail(t)
             dv          = datevec(t);
             dv(6)       = ceil(dv(6) * 1000) / 1000;
@@ -1178,19 +1178,19 @@ classdef irisFetch
          end %fn showTimeInDetail
       end %fn testResp
    end %static hidden methods
-   
-   
+
+
    methods(Static, Access=protected)
       function myDateStr = makeDateStr(dateInput)
          myDateStr = datestr(dateInput, irisFetch.DATE_FORMATTER);
       end
-      
+
       function d = jArrayList2complex(jArrayList)
          % for use on ArrayList objects containing things with getReal() and getImaginary()
          %  edu.iris.dmc.sacpz.model.Pole
          %  edu.iris.dmc.sacpz.model.Zero
          %  edu.iris.dmc.station.model.ComplexNumber
-         
+
          if jArrayList.size()<1
             assert(0==1,'Never should reach this');
             d      = zeros(0,1); % optimized
@@ -1198,22 +1198,22 @@ classdef irisFetch
             jArray = jArrayList.toArray;
             dr     = zeros(numel(jArray),1);
             di     = zeros(numel(jArray),1);
-            
+
             for n = 1 : jArrayList.size()%:-1: 1
                dr(n,1) = jArray(n).getReal().doubleValue;
                di(n,1) = jArray(n).getImaginary().doubleValue;
             end
             d      = complex(dr,di);
          end
-         
+
       end
-      
+
       function mts = convertTraces(traces)
          %irisFetch.convertTraces converts traces from java to a matlab structure
          %   mts = convertTraces(traces) where TRACES a java trace class. If the input
          %   traces are empty, then a 1x0 structure is returned.
          blankSacPZ = struct('units','','constant',[],'poles',[],'zeros',[]);
-         
+
          blankTrace = struct('network','','station','','location','',...
             'channel','','quality','','latitude',0,'longitude',0,...
             'elevation',0,'depth',0,'azimuth',0,'dip',0,...
@@ -1232,19 +1232,19 @@ classdef irisFetch
             mt.station  = char(traces(i).getStation());
             mt.location = char(traces(i).getLocation());
             mt.channel  = char(traces(i).getChannel());
-            
+
             mt.quality  = char(traces(i).getQuality());
-            
+
             mt.latitude  = traces(i).getLatitude();
             mt.longitude = traces(i).getLongitude();
             mt.elevation = traces(i).getElevation();
             mt.depth     = traces(i).getDepth();
             mt.azimuth   = traces(i).getAzimuth();
             mt.dip       = traces(i).getDip();
-            
+
             mt.sensitivity = traces(i).getSensitivity();
             mt.sensitivityFrequency = traces(i).getSensitivityFrequency();
-            
+
             mt.instrument  = char(traces(i).getInstrument());
             mt.sensitivityUnits = char(traces(i).getSensitivityUnits());
             dataType = char(traces(i).getDataType);
@@ -1268,13 +1268,13 @@ classdef irisFetch
             end
             mt.sampleCount = traces(i).getSampleCount();
             mt.sampleRate  = traces(i).getSampleRate();
-            
+
             startDateString = char(traces(i).getStartTime().toString());
             endDateString  = char(traces(i).getEndTime().toString());
-            
+
             mt.startTime   = datenum(startDateString, irisFetch.DATE_FORMATTER);
             mt.endTime     = datenum(endDateString, irisFetch.DATE_FORMATTER);
-            
+
             try
                jsacpz = traces(i).getSacpz();
             catch er
@@ -1306,25 +1306,25 @@ classdef irisFetch
             mts(i) = mt;
          end
       end
-      
-      
+
+
       %{
         ----------------------------------------------------------------
        DATE conversion routines
-      
+
        Java classes that can be used:
            java.sql.Timestamp : handles nanoseconds
            java.util.Date     : handles milliseconds
-      
+
        MATLAB is accurate to 0.01 milliseconds
       ----------------------------------------------------------------
       %}
-      
+
       function javadate = mdate2jdate(matlabdate)
          %mdate2jdate converts a matlab date to a java Date class
          %  javadate = irisFetch.mdate2jdate(matlab_date)converts from matlab to java with
          %  millisecond precision.
-         
+
          if ischar(matlabdate)
             matlabdate = datenum(matlabdate);
          end
@@ -1332,11 +1332,11 @@ classdef irisFetch
             error('IRISFETCH:mdate2jdate:incorrectDateFormat',...
                'A scalar matlab datenum was expected, but a different kind of value was received.');
          end
-         
+
          jmillis = ((matlabdate-irisFetch.BASE_DATENUM) * irisFetch.MS_IN_DAY) + .5 ; % add 0.5 to keep it in sync.
          javadate = java.util.Date(jmillis); %convert to a Date, loosing nanosecond precision
       end
-      
+
       %----------------------------------------------------------------
       % Look for GET / SET methods for the class.
       %----------------------------------------------------------------
@@ -1357,48 +1357,48 @@ function [M, argType] = getSetters(obj)
          % assumption is that any function that returns a criteria object of the same class is
          % a "Set" method. The first time a class is encountered, it's set methods and
          % arguments are memorized.
-         
+
          persistent className             % contains the list of classes that have already been done
          persistent listOfSetters         % contains a cell list of set-methods for each class
          persistent listOfArguments       % contains a cell list of inputs corresponding to each setter
-         
+
          if isempty(className)
             className = {};
             listOfSetters={};
             listOfArguments={};
          end
-         
+
          thisClass=class(obj);
-         
+
          memorizedClass                 = strcmp(thisClass, className);
-         
+
          if ~any(memorizedClass)
             classIndex                  = numel(className) + 1;
             className(classIndex)       = {thisClass};
-            
+
             all_methods                 = methods(thisClass);
             full_methods                = methods(thisClass,'-full');
             is_setter                   = strcmp(thisClass, strtok(full_methods));
             [UNUSED_VARIABLE, setter_inputs]          = strtok(strtok(full_methods(is_setter),')'),'('); %#ok<ASGLU> %loose ()
-            
+
             listOfArguments(classIndex) = {strrep(setter_inputs,'(','')};
             listOfSetters(classIndex)   = {all_methods(is_setter)};
-            
+
             memorizedClass = strcmp(thisClass, className);
             % disp (['Adding ', thisClass, ' setters ...']);
          end
-         
+
          M                             = listOfSetters{memorizedClass};
          argType                       = listOfArguments{memorizedClass};
       end
-      
+
       function [methodList, argType] = getMethods(obj,searchPrefix)
          persistent className methodsAndArguments
          if isempty(className)
             className            = {''};
             methodsAndArguments  = {{''},{''}};
          end
-         
+
          thisClass = class(obj);
          TF = strcmp(thisClass, className);
          if any(TF) % shortcut if this has been done before
@@ -1408,54 +1408,54 @@ function [M, argType] = getSetters(obj)
          else
             loc = numel(className)+1;
          end
-         
-         
+
+
          argType     = {}; %methodList = [];
          M           = methods(obj);
          M2          = methods(obj,'-full');
          idx         = strncmp(searchPrefix,M, length(searchPrefix));
          methodList  = M(idx);
          argList     = M2(idx);
-         
+
          p1          = strfind(argList,'(');
          p2          = strfind(argList,')');
          for n=1:numel(argList)
             argType(n) = {argList{n}(p1{n}+1:p2{n}-1)}; %#ok<AGROW>
          end
-         
+
          className(loc)             = {thisClass};
          methodsAndArguments(loc,1) = {methodList};
          methodsAndArguments(loc,2) = {argType};
-         
+
       end
-      
-      
+
+
       %================================================================
       %----------------------------------------------------------------
       %% PARSING ROUTINES
       %----------------------------------------------------------------
       %================================================================
-      
+
       function [getterList, fieldList] = getMethodsAndFields(obj)
-         
-         
+
+
          % this function uses a cache to speed up the retrieval of
          % get_methods and fieldnames.
-         
+
          persistent className
          persistent methodL
          persistent fieldL
-         
+
          if isempty(className)
             className = {''};
             methodL = {''};
             fieldL = {''};
          end
-         
+
          thisClass = class(obj);
-         
+
          TF = strcmp(thisClass, className);
-         
+
          if any(TF) % shortcut if this has been done before
             getterList = methodL{TF};
             fieldList = fieldL{TF};
@@ -1463,16 +1463,16 @@ function [M, argType] = getSetters(obj)
          else
             loc = numel(className)+1;
          end
-         
+
          allMethods = methods(obj);
          getterList = allMethods(strncmp('get',allMethods, 3));
-         
+
          % filter classes need class names for them to make sense to users.
          if isa(obj,'edu.iris.dmc.station.model.Filter')
             getterList = getterList(...
                ~( strcmp('get',getterList) | ...
                strcmp('getAny',getterList) ));
-            
+
          else
             getterList = getterList(...
                ~( strcmp('get',getterList) | ...
@@ -1497,35 +1497,35 @@ function [M, argType] = getSetters(obj)
                n=[];
          end
          getterList(n)  = [];
-         
+
          fieldList      = strrep(getterList,'get',''); %get rid of 'get'
-         
+
          className(loc) = {thisClass};
          methodL(loc)   = {getterList};
          fieldL(loc)    = {fieldList};
       end
-      
+
       function out = parser_for_IRIS_WS_2_0_0(value)
          % call other classes based on this function
-         
+
          out=irisFetch.parse(value, containers.Map);
       end
-      
+
       function s = parse(value,stacklistt)
          % parse takes each value, looks up its class, and converts it to MATLAB
          % struct = parse(javaObject) recursively parses a java object. If the java object
          % contains objects of other java classes, then they will be parsed also.
          %
          % struct = parse(javaObject, stacklistt)
-         
+
          persistent stacklist
          if nargin == 2
             stacklist = stacklistt;
          end
-         
-         
+
+
          myClass = class(value);
-         
+
          if irisFetch.recursionAssert
             try
                tf = stacklist(myClass);
@@ -1541,11 +1541,11 @@ function [M, argType] = getSetters(obj)
                   'Please comment out the offending line of code (line %d)\n'],myClass,x(1).line);
             end
             stacklist(myClass)=true;
-            
+
          end
-         
+
          switch myClass
-            
+
             case {'java.util.ArrayList'}
                if irisFetch.recursionAssert
                   stacklist(myClass)=false;
@@ -1571,7 +1571,7 @@ function [M, argType] = getSetters(obj)
                   }
                s                  = value.getValue();
                % unused get routines: getUnit, getPlusError,getMinusError
-               
+
             case {'edu.iris.dmc.timeseries.model.Timeseries'}
                s.NetworkCode             = char(value.getNetworkCode());
                s.StationCode             = char(value.getStationCode());
@@ -1579,21 +1579,21 @@ function [M, argType] = getSetters(obj)
                s.ChannelCode             = char(value.getChannelCode());
                s.DataQuality             = irisFetch.parse(value.getDataQuality()); % get char
                s.Segments                = irisFetch.parse(value.getSegments());    % get java.util.Collection
-               
+
             case {'edu.iris.dmc.fdsn.station.model.FIR$NumeratorCoefficient'}
                s                   = value.getValue(); %was s.Value
-               
+
             case {'edu.iris.dmc.fdsn.station.model.ResponseListElement'}
                s.Frequency               = irisFetch.parse(value.getFrequency());   % get edu.iris.dmc.fdsn.station.model.Frequency
                s.Amplitude               = irisFetch.parse(value.getAmplitude());   % get edu.iris.dmc.fdsn.station.model.Float
                s.Phase                   = irisFetch.parse(value.getPhase());       % get edu.iris.dmc.fdsn.station.model.AngleType
-               
+
             case {'edu.iris.dmc.fdsn.station.model.RestrictedStatus'}
                s.value                   = char(value.value());
                s.values                  = irisFetch.parseAnArray(value.values());
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Sensitivity'}
                s.FrequencyStart          = double(value.getFrequencyStart());
                s.FrequencyEnd            = double(value.getFrequencyEnd());
@@ -1604,8 +1604,8 @@ function [M, argType] = getSetters(obj)
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                % s.OutputUnitsName         = char(value.getOutputUnits().getName); % get edu.iris.dmc.fdsn.station.model.Units
                % s.OutputUnitsDescription  = char(value.getOutputUnits().getDescription); % get edu.iris.dmc.fdsn.station.model.Units
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.Polynomial'}
                s.ApproximationType       = char(value.getApproximationType());
                s.Name                    = char(value.getName());
@@ -1619,25 +1619,25 @@ function [M, argType] = getSetters(obj)
                s.ResourceId              = char(value.getResourceId());
                s.InputUnits = irisFetch.addUnits(value.getInputUnits());  % get edu.iris.dmc.fdsn.station.model.Units
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits());  % get edu.iris.dmc.fdsn.station.model.Units
-               
+
             case {'edu.iris.dmc.timeseries.model.Segment$Type'}
                s.values = irisFetch.parseAnArray(value.values());
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.package-info'}
-               
+
             case {'edu.iris.dmc.fdsn.station.model.BaseFilter'}
                s.Name                    = char(value.getName());
                s.Description             = char(value.getDescription());
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.LogType'}
                s.Entry = irisFetch.parseAnArray(value.getEntry());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.ResponseList'}
                s.ResponseListElement = irisFetch.parseAnArray(value.getResponseListElement());
                s.Name                    = char(value.getName());
@@ -1645,11 +1645,11 @@ function [M, argType] = getSetters(obj)
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Units'}
                s.Name                    = char(value.getName());
                s.Description             = char(value.getDescription());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.ResponseStage'}
                s.Number                  = double(value.getNumber());
                s.PolesZeros              = irisFetch.parse(value.getPolesZeros());  % get edu.iris.dmc.fdsn.station.model.PolesZeros
@@ -1659,19 +1659,19 @@ function [M, argType] = getSetters(obj)
                s.Polynomial              = irisFetch.parse(value.getPolynomial());  % get edu.iris.dmc.fdsn.station.model.Polynomial
                s.Decimation              = irisFetch.parse(value.getDecimation());  % get edu.iris.dmc.fdsn.station.model.Decimation
                s.StageGain               = irisFetch.parse(value.getStageGain());   % get edu.iris.dmc.fdsn.station.model.Gain
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.SampleRateRatioType'}
                s.NumberSamples           = double(value.getNumberSamples());
                s.NumberSeconds           = double(value.getNumberSeconds());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Decimation'}
                s.Offset                  = value.getOffset().doubleValue;
                s.Delay                   = irisFetch.parse(value.getDelay());       % get edu.iris.dmc.fdsn.station.model.Float
                s.InputSampleRate         = irisFetch.parse(value.getInputSampleRate()); % get edu.iris.dmc.fdsn.station.model.Frequency
                s.Factor                  = value.getFactor().doubleValue;
                s.Correction              = irisFetch.parse(value.getCorrection());  % get edu.iris.dmc.fdsn.station.model.Float
-               
+
             case {'edu.iris.dmc.timeseries.model.Segment'}
                s.Type                    = irisFetch.parse(value.getType());        % get edu.iris.dmc.timeseries.model.Segment$Type
                s.StartTime               = irisFetch.parse(value.getStartTime());   % get java.sql.Timestamp
@@ -1683,33 +1683,33 @@ function [M, argType] = getSetters(obj)
                s.FloatData               = irisFetch.parseAnArray(value.getFloatData());
                s.IntData                 = irisFetch.parseAnArray(value.getIntData());
                s.ExpectedNextSampleTime  = irisFetch.parse(value.getExpectedNextSampleTime()); % get java.sql.Timestamp
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.PhoneNumberType'}
                s.Phone = sprintf('%s: [+%d] %03d %s',... % desc: [+country] area phonenum
                   char(value.getDescription()),...
                   double(value.getCountryCode()),...
                   double(value.getAreaCode()),...
                   char(value.getPhoneNumber()) );
-               
+
             case {'edu.iris.dmc.sacpz.model.PZ',...
                   'edu.iris.dmc.fdsn.station.model.ComplexNumber',...
                   'edu.iris.dmc.sacpz.model.Zero',...
                   'edu.iris.dmc.fdsn.station.model.PoleZero',...
                   'edu.iris.dmc.sacpz.model.Pole'}
                s = complex(value.getReal.getValue(), value.getImaginary.getValue());
-               
+
             case {'edu.iris.dmc.sacpz.model.PolesZeros'}
                s.Poles = irisFetch.parseAnArray(value.getPoles());
                s.Zeros = irisFetch.parseAnArray(value.getZeros());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Filter'}
                s.Name                    = char(value.getName());
                s.Description             = char(value.getDescription());
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.FIR'}
                s.Symmetry                = char(value.getSymmetry());
                sz = value.getNumeratorCoefficient.size;
@@ -1726,21 +1726,21 @@ function [M, argType] = getSetters(obj)
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.DataAvailability'}
                s.Extent                  = irisFetch.parse(value.getExtent());      % get edu.iris.dmc.fdsn.station.model.DataAvailabilityExtent
                s.Span = irisFetch.parseAnArray(value.getSpan());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.RestrictedStatusType'}
                s.value                   = char(value.value());
                s.values = irisFetch.parseAnArray(value.values());
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Gain'}
                s.Value                   = value.getValue();
                s.Frequency               = value.getFrequency();
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Equipment'}
                s.Type                    = char(value.getType());
                s.SerialNumber            = char(value.getSerialNumber());
@@ -1752,12 +1752,12 @@ function [M, argType] = getSetters(obj)
                s.RemovalDate             = irisFetch.jdate2mdate(value.getRemovalDate());
                s.CalibrationDate = irisFetch.parseAnArray(value.getCalibrationDate());
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.DataAvailabilityExtent'}
                s.End                     = irisFetch.jdate2mdate(value.getEnd());
                s.Start                   = irisFetch.jdate2mdate(value.getStart());
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.Coefficients'}
                s.CfTransferFunctionType  = char(value.getCfTransferFunctionType());
                sz = value.getNumerator.size;
@@ -1773,11 +1773,11 @@ function [M, argType] = getSetters(obj)
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
                s.ResourceId              = char(value.getResourceId());
-               
+
             case {'edu.iris.dmc.sacpz.model.AbstractPZ'}
                s.Real                    = double(value.getReal());
                s.Imaginary               = double(value.getImaginary());
-               
+
                %----------------------------------------------------------------------------------
                % EVENT
                %----------------------------------------------------------------------------------
@@ -1793,7 +1793,7 @@ function [M, argType] = getSetters(obj)
                s.ContributorEventId      = char(value.getContributorEventId());
                s.PublicId                = char(value.getPublicId());
                s.Arrivals = irisFetch.parseAnArray(value.getArrivals());
-               
+
             case {'edu.iris.dmc.event.model.Pick'}
                s.Location                = char(value.getLocation());
                s.Channel                 = char(value.getChannel());
@@ -1801,7 +1801,7 @@ function [M, argType] = getSetters(obj)
                s.Network                 = char(value.getNetwork());
                s.Station                 = char(value.getStation());
                s.PickId                  = char(value.getPickId());
-               
+
             case {'edu.iris.dmc.event.model.Arrival'}
                s.PublicId                = char(value.getPublicId());
                s.Distance                = double(value.getDistance());
@@ -1809,14 +1809,14 @@ function [M, argType] = getSetters(obj)
                s.Phase                   = char(value.getPhase());
                s.Picks = irisFetch.parseAnArray(value.getPicks());
                s.TimeResidual            = double(value.getTimeResidual());
-               
+
             case {'edu.iris.dmc.event.model.Magnitude'}
                s.Value                   = double(value.getValue());
                s.Type                    = char(value.getType());
                s.Author                  = char(value.getAuthor());
                s.PublicId                = char(value.getPublicId());
                s.OriginPublicId          = char(value.getOriginPublicId());
-               
+
             case {'edu.iris.dmc.event.model.Event'}
                s.Type                    = char(value.getType());
                s.FlinnEngdahlRegionCode  = double(value.getFlinnEngdahlRegionCode());
@@ -1848,14 +1848,14 @@ function [M, argType] = getSetters(obj)
                s.Magnitudes         = irisFetch.parseAnArray(value.getMagnitudes());
                s.Picks = irisFetch.parseAnArray(value.getPicks());
                s.PublicId           	 = char(value.getPublicId());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Message'}
                s.Networks = irisFetch.parseAnArray(value.getNetwork());
-               
+
             case {'edu.iris.dmc.sacpz.model.NumberUnit'}
                s.Value                   = double(value.getValue());
                s.Unit                    = char(value.getUnit());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Comment'}
                s.Value                   = char(value.getValue());
                s.Id                      = double(value.getId());
@@ -1864,7 +1864,7 @@ function [M, argType] = getSetters(obj)
                s.EndEffectiveDate        = irisFetch.jdate2mdate(value.getEndEffectiveDate());
                % s.BeginEffectiveTime      = irisFetch.jdate2mdate(value.getBeginEffectiveTime());
                % s.EndEffectiveTime        = irisFetch.jdate2mdate(value.getEndEffectiveTime());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.PolesZeros'}
                s.Zero = irisFetch.parseAnArray(value.getZero());
                s.PzTransferFunctionType  = char(value.getPzTransferFunctionType());
@@ -1876,13 +1876,13 @@ function [M, argType] = getSetters(obj)
                s.ResourceId              = char(value.getResourceId());
                s.InputUnits = irisFetch.addUnits(value.getInputUnits);
                s.OutputUnits = irisFetch.addUnits(value.getOutputUnits);
-               
+
             case {'edu.iris.dmc.fdsn.station.model.DataAvailabilitySpan'}
                s.End                     = irisFetch.jdate2mdate(value.getEnd());
                s.Start                   = irisFetch.jdate2mdate(value.getStart());
                s.NumberSegments          = double(value.getNumberSegments());
                s.MaximumTimeTear         = double(value.getMaximumTimeTear());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Site'}
                s.Name                    = char(value.getName());
                s.Country                 = char(value.getCountry());
@@ -1890,28 +1890,28 @@ function [M, argType] = getSetters(obj)
                s.Town                    = char(value.getTown());
                s.County                  = char(value.getCounty());
                s.Region                  = char(value.getRegion());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Polynomial$Coefficient'}
                s = value.getValue();
-               
+
             case {'edu.iris.dmc.fdsn.station.model.NominalType'}
                s.value                   = char(value.value());
                s.values = irisFetch.parseAnArray(value.values());
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.Response'}
                s.InstrumentSensitivity   = irisFetch.parse(value.getInstrumentSensitivity()); % get edu.iris.dmc.fdsn.station.model.Sensitivity
                s.Stage = irisFetch.parseAnArray(value.getStage());
                s.InstrumentPolynomial    = irisFetch.parse(value.getInstrumentPolynomial()); % get edu.iris.dmc.fdsn.station.model.Polynomial
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.Station$Operator'}
                s.Agency = irisFetch.parseAnArray(value.getAgency());
                s.Contact = irisFetch.parseAnArray(value.getContact());
                s.WebSite                 = char(value.getWebSite());
-               
+
             case {'edu.iris.dmc.timeseries.model.Record'}
                s.Location = irisFetch.parseAnArray(value.getLocation());
                s.StartTime               = irisFetch.parse(value.getStartTime());   % get java.sql.Timestamp
@@ -1919,13 +1919,13 @@ function [M, argType] = getSetters(obj)
                s.SampleRate              = value.getSampleRate();
                s.ExpectedNextSampleTime  = irisFetch.parse(value.getExpectedNextSampleTime()); % get java.sql.Timestamp
                s.NumberOfSamples         = value.getNumberOfSamples();
-               
+
             case {'edu.iris.dmc.fdsn.station.model.PersonType'}
                s.Name = irisFetch.parseAnArray(value.getName());
                s.Agency = irisFetch.parseAnArray(value.getAgency());
                s.Email = irisFetch.parseAnArray(value.getEmail());
                s.Phone = irisFetch.parseAnArray(value.getPhone());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.BaseNodeType'}
                assert('did not expect to get here');
                s.Comment = irisFetch.parseAnArray(value.getComment());
@@ -1940,8 +1940,8 @@ function [M, argType] = getSetters(obj)
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                s.AlternateCode           = char(value.getAlternateCode());
                s.HistoricalCode          = char(value.getHistoricalCode());
-               
-               
+
+
             case {'edu.iris.dmc.fdsn.station.model.Channel'}
                s.ChannelCode                    = char(value.getCode());
                s.LocationCode            = char(value.getLocationCode());
@@ -1961,7 +1961,7 @@ function [M, argType] = getSetters(obj)
                   s.SensitivityUnits = '';
                   s.SensitivityValue = NaN;
                end
-               
+
                s.Equipment               = irisFetch.parse(value.getEquipment());   % get edu.iris.dmc.fdsn.station.model.Equipment
                s.SampleRateRatio         = irisFetch.parse(value.getSampleRateRatio()); % get edu.iris.dmc.fdsn.station.model.SampleRateRatioType
                s.StorageFormat           = char(value.getStorageFormat());
@@ -1970,16 +1970,16 @@ function [M, argType] = getSetters(obj)
                s.Sensor                  = irisFetch.parse(value.getSensor());      % get edu.iris.dmc.fdsn.station.model.Equipment
                s.PreAmplifier            = irisFetch.parse(value.getPreAmplifier()); % get edu.iris.dmc.fdsn.station.model.Equipment
                s.ExternalReference = irisFetch.parseAnArray(value.getExternalReference());
-               
+
                s.Latitude           = value.getLatitudeValue().doubleValue;
                s.Longitude          = value.getLongitudeValue().doubleValue;
                s.Elevation          = value.getElevationValue().doubleValue;
                s.Depth              = value.getDepthValue().doubleValue;
                s.Azimuth            = value.getAzimuthValue().doubleValue;
                s.Dip                = value.getDipValue().doubleValue;
-               
+
                s.SampleRate         = value.getSampleRateValue().doubleValue;
-               
+
                s.CalibrationUnits        = irisFetch.parse(value.getCalibrationUnits()); % get edu.iris.dmc.fdsn.station.model.Units
                %         s.Comment = irisFetch.parseAnArray(value.getComment());
                %s.StartTime               = irisFetch.jdate2mdate(value.getStartTime());
@@ -1990,7 +1990,7 @@ function [M, argType] = getSetters(obj)
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                s.AlternateCode           = char(value.getAlternateCode());
                s.HistoricalCode          = char(value.getHistoricalCode());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Station'}
                % s.Network                 = irisFetch.parse(value.getNetwork());     % get edu.iris.dmc.fdsn.station.model.Network
                s.StationCode                    = char(value.getCode());
@@ -2019,7 +2019,7 @@ function [M, argType] = getSetters(obj)
                s.Channels                = irisFetch.parseAnArray(value.getChannels());
                s.TotalNumberChannels     = double(value.getTotalNumberChannels());
                s.SelectedNumberChannels  = double(value.getSelectedNumberChannels());
-               
+
             case {'edu.iris.dmc.fdsn.station.model.Network'}
                s.NetworkCode                    = char(value.getCode());
                s.Description             = char(value.getDescription());
@@ -2035,8 +2035,8 @@ function [M, argType] = getSetters(obj)
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                % s.AlternateCode           = char(value.getAlternateCode());
                % s.HistoricalCode          = char(value.getHistoricalCode());
-               
-               
+
+
             case {'edu.iris.dmc.sacpz.model.Sacpz'}
                s.Location                = char(value.getLocation());
                s.Channel                 = char(value.getChannels());
@@ -2063,7 +2063,7 @@ function [M, argType] = getSetters(obj)
                s.InstrumentGain          = irisFetch.parse(value.getInstrumentGain()); % get edu.iris.dmc.sacpz.model.NumberUnit
                s.A0                      = double(value.getA0());
                s.Constant                = value.getConstant();
-               
+
             otherwise
                warning('IRISFETCH:parse:classNotFound','%s was not found',myClass)%who knows?
          end % cases
@@ -2071,7 +2071,7 @@ function [M, argType] = getSetters(obj)
             stacklist(myClass)=false;
          end
       end  % main function
-      
+
       function matlabdate = jdate2mdate(javadate)
          if isempty(javadate)
             matlabdate = [];
@@ -2098,7 +2098,7 @@ function [M, argType] = getSetters(obj)
          end
          matlabdate=datestr(matlabdate, irisFetch.DATE_FORMATTER);
       end %fn jdate2mdate
-      
+
       function s = addUnits(theUnit)
          if ~isempty(theUnit)
             s         = { char(theUnit.getName), char(theUnit.getDescription) };  % get edu.iris.dmc.fdsn.station.model.Units
@@ -2106,7 +2106,7 @@ function [M, argType] = getSetters(obj)
             s = {'',''};
          end
       end
-      
+
       function s = parseAnArray(theArray)
          persistent getAz getDis getResid
          if isempty(getAz) || isempty(getDis) || isempty(getResid)
@@ -2118,15 +2118,15 @@ function [M, argType] = getSetters(obj)
             s = theArray;
             return
          end
-         
+
          arraySize = theArray.size();
          if arraySize == 0,
             s=[];
             return
          end
-         
+
          firstItem = theArray.get(0);
-         
+
          if isjava(firstItem)
             switch class(firstItem)
                case {'edu.iris.dmc.fdsn.event.model.Event'}
@@ -2140,7 +2140,7 @@ function [M, argType] = getSetters(obj)
             theArray.clear;
             return
          end
-         
+
          if arraySize == 1
             s=firstItem;
          elseif ischar(firstItem)
@@ -2158,20 +2158,20 @@ function [M, argType] = getSetters(obj)
          end
          theArray.clear;
       end %fn parseAnArray
-      
+
       %----------------------------------------------------------------
       % END: PARSING ROUTINES
       %----------------------------------------------------------------
       %================================================================
       %% CRITERIA protected routines
-      
+
       function crit = addCriteria(crit, value, addMethod)
          %used to add Sta, Net, Loc, Chan to criteria
          % For example:
          %   singleAddToCriteria(criteria, {'OKCF','MNO?'},'addStation')
          % will invoke:
          %   criteria.addStation('OKCF').addStation('MNO?')
-         
+
          if isempty(value)
             return %do nothing
          end
@@ -2185,13 +2185,13 @@ function [M, argType] = getSetters(obj)
             end
          end
       end
-      
+
       function crit = setBoxCoordinates(crit, value)
          % setBoxCoordinates (minLat, maxLat, minLon, maxLon)
          % values of 'NAN' are ignored
          assert(numel(value)==4,'IRISFETCH:setBoxCoordinates:InvalidParameterCount',...
             'Expected [minLat, maxLat, minLon, maxLon]');
-         
+
          setMethods = {'setMinimumLatitude','setMaximumLatitude',...
             'setMinimumLongitude','setMaximumLongitude'};
          for n=1:numel(setMethods)
@@ -2200,9 +2200,9 @@ function [M, argType] = getSetters(obj)
             end
          end
       end
-      
+
       function crit = setCriteria(crit, paramList)
-         
+
          %----------------------------------------------------------
          % The following code allows for open-ended search criteria
          % that can change when the java library changes
@@ -2212,23 +2212,23 @@ function [M, argType] = getSetters(obj)
          % Also determine the input parameters for each setter, then
          % use that to properly create/cast the data.
          %----------------------------------------------------------
-         
+
          % Get a list of parameters, their set functions, and input
          % types, and do it outside the loop so they are not needlessly
          % rerun
-         
+
          [allSetMethods, argType]   = irisFetch.getSetters(crit);
          settableFieldnames         = irisFetch.getSettableFields(crit);
          allMethods                 = methods(crit);
-         
+
          while ~isempty(paramList) && numel(paramList) >= 2
-            
+
             % Grab the parameter pair, then remove from parameter list
             [param, value] = deal(paramList{1:2});
             paramList(1:2)=[];
-            
+
             indexOfMethod = strcmpi(param,settableFieldnames);
-            
+
             if any(indexOfMethod)
                try
                   converter=irisFetch.M2J_MAP(argType{indexOfMethod});
@@ -2240,14 +2240,14 @@ function [M, argType] = getSetters(obj)
                crit.(allSetMethods{indexOfMethod})(converter(value));
                continue
             end % if any
-            
+
             % we shall only pass this point if existing methods were not used
-            
+
             switch lower(param)
                %handle special cases
                case 'boxcoordinates'
                   crit = irisFetch.setBoxCoordinates(crit, value);
-                  
+
                case 'radialcoordinates'
                   crit.setLatitude(java.lang.Double(value(1)));
                   crit.setLongitude(java.lang.Double(value(2)));
@@ -2255,8 +2255,8 @@ function [M, argType] = getSetters(obj)
                   if numel(value) ==4 && ~isnan(value(4))
                      crit.setMinimumRadius(java.lang.Double(value(4)));
                   end
-                  
-                  
+
+
                case 'includeavailability'
                   assert((islogical(value)||isnumeric(value)) &&isscalar(value),'The value of IncludeAvailability should be a scalar logical: true or false (no quotes)');
                   crit.setIncludeAvailability(value);
@@ -2266,7 +2266,7 @@ function [M, argType] = getSetters(obj)
                case 'matchtimeseries'
                   assert((islogical(value)||isnumeric(value)) &&isscalar(value),'The value of MatchTimeseries should be a logical: true or false (no quotes)');
                   crit.setMatchTimeSeries(value);
-                  
+
                case 'limit'
                   crit.setFetchLimit(java.lang.Integer(value));
                otherwise
@@ -2286,9 +2286,9 @@ function [M, argType] = getSetters(obj)
             end
          end
       end
-      
+
       %% SAC Read/Write routines
-      
+
       function [ tr_out ] = read_sac_in(fileDirectory)
 
          % Determine if the user input is for a file or a whole directory
@@ -2303,17 +2303,17 @@ function [M, argType] = getSetters(obj)
              fileNames = dir('*.SAC');
          elseif  logical(strfind(fileDirectory,'*')) | ~isempty(strfind(fileDirectory,'?')) % ..for wildcards..
              if strcmpi(fileDirectory,'*.SAC')
-                 fileNames = dir(fileDirectory); 
+                 fileNames = dir(fileDirectory);
              else
                  fileNames = dir([fileDirectory '*.SAC']);
              end
          else
              error(['IRISFETCH:read_sac_in - ' fileDirectory ' not a valid file or directory'])
          end
-         
+
          % SAC header definition
          function sac = make_sac_header(hdrval_n,hdrval_s)
-              
+
              names = {'DELTA' 'DEPMIN' 'DEPMAX' 'SCALE' 'ODELTA'...
              'B' 'E' 'O' 'A' 'INTERNAL9'...
              'T0' 'T1' 'T2' 'T3' 'T4'...
@@ -2344,7 +2344,7 @@ function [M, argType] = getSetters(obj)
              'KT9' 'KF' 'KUSER0'...
              'KUSER1' 'KUSER2' 'KCMPNM'...
              'KNETWK' 'KDATRD' 'KINST'};
-         
+
              if numel(names)~=numel(hdrval_n)+numel(hdrval_s)
                  error('IRISFETCH:read_sac_in - header is not proper length')
              end
@@ -2363,7 +2363,7 @@ function [M, argType] = getSetters(obj)
                  sac.KHOLE='';
              end
          end  % END make_sac_header
-         
+
          blanksacPZ = struct('units',[],'constant',[],'poles',[],'zeros',[]);
          tr_out = repmat(struct('network',[],'station',[],'location',[],...
              'channel',[],'quality',[],'latitude',[],'longitude',[],...
@@ -2371,12 +2371,12 @@ function [M, argType] = getSetters(obj)
              'sensitivity',[],'sensitivityFrequency',[],'instrument','',...
              'sensitivityUnits',[],'data',[],'sampleCount',[],'sampleRate',[],...
              'startTime',[],'endTime',[],'sacpz',blanksacPZ),numel(fileNames),1);
-         
+
           function trace_out = format_blank_fields(trace_in)
              % Determines if the fields of a given Trace structure contain
              %   default SAC values and formats them as NaN for numeric fields
              %   and empty arrays for alpha-numeric fields.
-             
+
              names = fieldnames(trace_in);
              for ii = 1:numel(names)
                  if isnumeric(trace_in.(names{ii})) & trace_in.(names{ii})==-12345
@@ -2387,7 +2387,7 @@ function [M, argType] = getSetters(obj)
              end
              trace_out = trace_in;
           end
-          
+
          % Loop over filenames
          for i=1:numel(fileNames)
              % Assumes little-endian formatting at first, but tries
@@ -2397,12 +2397,12 @@ function [M, argType] = getSetters(obj)
              if fid==-1
                  error(['IRISFETCH:read_sac_in - Cannot open file: ' fileNames(i).name])
              end
-             
-             % Check SAC header and try byte order             
+
+             % Check SAC header and try byte order
              hn = [fread(fid,[5,14],'float32'),fread(fid,[5,8],'int32')]; hn = hn(:);
              hs = cellstr(fread(fid,[8,24],'*char')');
              hd = fread(fid,'float32');
-             
+
              if (hn(77) == 4 || hn(77) == 5)
                  fclose(fid);
                  error(['IRISFETCH:read_sac_in - NVHDR = 4 or 5. File: ' fileNames(i).name ...
@@ -2418,13 +2418,13 @@ function [M, argType] = getSetters(obj)
                  hs = cellstr(fread(fid,[8,24],'*char')');
                  hd = fread(fid,'float32');
              end
-             
+
              % Match up the header name with its value
              sac = make_sac_header(hn,hs);
              if sac.LEVEN~=1
                  error('IRISFETCH:read_sac_in - Data is unevenly spaced.')
              else
-                % Now, match up the header values with what goes into 
+                % Now, match up the header values with what goes into
                 % Traces structures.
                 date_str = [num2str(sac.NZYEAR) '-' num2str(sac.NZJDAY)...
                     '-' num2str(sac.NZHOUR) ':' num2str(sac.NZMIN)...
@@ -2454,7 +2454,7 @@ function [M, argType] = getSetters(obj)
              end
          end
       end
-      
+
       function [ output_args ] = write_sac_out(writeDirectory, traces, verbosity)
          %WRITE_JAVATRACES_TO_SAC Summary of this function goes here
          %   Detailed explanation goes here
@@ -2466,18 +2466,18 @@ function [M, argType] = getSetters(obj)
          %   * net == SY & loc == S1 & channel in {LXE, LXN, LXZ}
          %   * net == SY & loc == S2 & channel in {MXE, MXN, MXZ}
          %   This behavior is controlled by SET_SYNTHETIC_FLAG
-         
+
          output_args = true;
          dbPrint = irisFetch.getDBfprintf(verbosity);
-                
+
          SET_SYNTHETIC_FLAG = true; % set the synthetic flag based on network/channel combo
          for n = 1 : length(traces)
             write_trace(writeDirectory, traces(n))
          end
-         
+
          function value = adjust_length(value, desired_length)
             % pads character fields with with spaces or crops
-            
+
             if length(value) < desired_length
                z = '                '; % 16 byte spaces
                value = [value, z(length(value)+1:desired_length)];
@@ -2485,7 +2485,7 @@ function [M, argType] = getSetters(obj)
                value = value(1:desired_length);
             end
          end
-         
+
          function write_sac_data_values(fid, javaTrace)
             % Write out the amplitude values to the sac file.
             fseek(fid, 0,'eof'); %go to end of file, which should just be the header.
@@ -2507,16 +2507,16 @@ function [M, argType] = getSetters(obj)
                error('IRISFETCH:traceNeitherJavaNorStruct',...
                   'attempted to interpret data from a trace that was neither a struct nor a java object')
             end
-            
+
          end
-         
+
          function write_trace_header_to_sac(fid, javaTrace)
             % write_trace_header_to_sac
             % write header information to file.
             % eg. Net, Sta, Cha, Loc, Lat, Lon, Elev, Depth, Az, Inc,
             %     instName, dates, and delta
             % expects an individual javaTrace or Struct
-            
+
             % enumerated types...
             ITIME = 1; % time series data
             % data quality descriptions
@@ -2524,23 +2524,23 @@ function [M, argType] = getSetters(obj)
             % IGOOD = 45;
             % IGLCH = 46;
             % IDROP = 47;
-            
+
             write_sac_field(fid, 'NVHDR', 6); % sac version
-            
+
             if isjava(javaTrace)
                % parse out the JAVA object
                write_sac_field(fid, 'KNETWK', char(javaTrace.getNetwork()));
                write_sac_field(fid, 'KSTNM', char(javaTrace.getStation()));
                write_sac_field(fid, 'KHOLE', char(javaTrace.getLocation()));
                write_sac_field(fid, 'KCMPNM', char(javaTrace.getChannel()));
-               
+
                write_sac_field(fid, 'STLA', javaTrace.getLatitude()); % Station Latitude
                write_sac_field(fid, 'STLO', javaTrace.getLongitude()); % Station Longitude
                write_sac_field(fid, 'STEL', javaTrace.getElevation()); % Station Elevation
                write_sac_field(fid, 'STDP', javaTrace.getDepth()); % Station depth
                write_sac_field(fid, 'CMPAZ', javaTrace.getAzimuth()); % Comp Az (CLK from N)
                write_sac_field(fid, 'CMPINC', javaTrace.getDip() ); % Comp Inc Angle (from vert)
-               
+
                write_sac_field(fid, 'KINST', char(javaTrace.getInstrument())); % Instrument Name
                % write_sac_field(fid, 'B', javaTrace.getStartTime.getTime); % beginning time (epoch)
                write_sac_field(fid, 'B', 0); % beginning time (epoch)
@@ -2553,7 +2553,7 @@ function [M, argType] = getSetters(obj)
                write_sac_field(fid, 'NZSEC', startTime.getSeconds());
                write_sac_field(fid, 'NZMSEC', startTime.getNanos() / 1000000); % 1 mSec = 1e+6 nanoseconds
                write_sac_field(fid, 'IFTYPE', ITIME);
-               
+
                write_sac_field(fid, 'LEVEN', true); % evenly spaced data
                write_sac_field(fid, 'DELTA', 1/javaTrace.getSampleRate()); % ODELTA would have observed change...
                if SET_SYNTHETIC_FLAG
@@ -2563,21 +2563,21 @@ function [M, argType] = getSetters(obj)
                      char(javaTrace.getLocation()), ...
                      char(javaTrace.getChannel())))
                end
-               
+
             elseif isstruct(javaTrace)
                % parse out the TRACE structure.
                write_sac_field(fid, 'KNETWK', javaTrace.network);
                write_sac_field(fid, 'KSTNM', javaTrace.station);
                write_sac_field(fid, 'KHOLE', javaTrace.location);
                write_sac_field(fid, 'KCMPNM', javaTrace.channel);
-               
+
                write_sac_field(fid, 'STLA', javaTrace.latitude); % Station Latitude
                write_sac_field(fid, 'STLO', javaTrace.longitude); % Station Longitude
                write_sac_field(fid, 'STEL', javaTrace.elevation); % Station Elevation
                write_sac_field(fid, 'STDP', javaTrace.depth); % Station depth
                write_sac_field(fid, 'CMPAZ', javaTrace.azimuth); % Comp Az (CLK from N)
                write_sac_field(fid, 'CMPINC', javaTrace.dip); % Comp Inc Angle (from vert)
-               
+
                write_sac_field(fid, 'KINST', javaTrace.instrument); % Instrument Name
                % write_sac_field(fid, 'B', javaTrace.getStartTime.getTime); % beginning time (epoch)
                write_sac_field(fid, 'B', 0); % beginning time (epoch)
@@ -2588,10 +2588,10 @@ function [M, argType] = getSetters(obj)
                write_sac_field(fid, 'NZHOUR', dv(4));
                write_sac_field(fid, 'NZMIN', dv(5));
                write_sac_field(fid, 'NZSEC', fix(dv(6)));
-               
+
                write_sac_field(fid, 'NZMSEC', rem(dv(6),1) * 1000); % 1 mSec = 1e+6 nanoseconds
                write_sac_field(fid, 'IFTYPE', ITIME);
-               
+
                write_sac_field(fid, 'LEVEN', true); % evenly spaced data
                write_sac_field(fid, 'DELTA', 1/javaTrace.sampleRate); % ODELTA would have observed change...
                if SET_SYNTHETIC_FLAG
@@ -2601,30 +2601,30 @@ function [M, argType] = getSetters(obj)
                      javaTrace.location, ...
                      javaTrace.channel));
                end
-               
+
             else
                % unrecognized format
                error('IRISFETCH:traceNeitherJavaNorStruct',...
                   'attempted to write a trace that was neither a struct nor a java object')
             end
-            
+
             % ---- KNOWN but IGNORED FIELDS ------------------------------
             % SCALE: since it is not known whether it should be included
             % IQUAL: because SAC quality ~= IRIS quality flags.
             % - Confirmed in issue #579.
-            
+
             % Described in SAC manual, but not found in the header
             % description: NZDTTM, KZDATE, KZTIME
-            
+
             % CAN SET LPSPOL from ???
             %write_sac_Field(fid, 'LPSPOL', javaTrace.);
             % station polarity TRUE (+) w/ left hand rule assume TRUE
             % ------------------------------------------------------------
-            
-            
+
+
             function isSynthetic = isSynth(net, ~, loc, cha)
                % checks against known synthetic combos.
-               
+
                % SET ISYNTH ACCORDING TO THE CHANNEL
                % source: ds.iris.edu/dms/products/shakemoviesynsthetics/
                isSynthetic = false;
@@ -2640,7 +2640,7 @@ function [M, argType] = getSetters(obj)
                end
             end
          end
-         
+
          function write_sac_field(fid, sacfield, value)
             % write_sac_field writes an individual field to the open file.
             % FID is the open file id
@@ -2664,7 +2664,7 @@ function [M, argType] = getSetters(obj)
                   'problem seeking within the SAC file')
             end
          end
-         
+
          function write_default_sac_header(fid)
             % writes all header fields to disk, with their default values.
             fseek(fid,0,'bof');
@@ -2684,7 +2684,7 @@ function [M, argType] = getSetters(obj)
                currpointer = ftell(fid);
             end
          end
-         
+
          function write_trace(writeDirectory, trace)
             % writes one trace to file with a name based trace's metadata.
             if ~exist(writeDirectory,'dir')
@@ -2697,7 +2697,7 @@ function [M, argType] = getSetters(obj)
             machineformat = 'ieee-le';
             outputFileName = fullfile(writeDirectory, outputname_from_trace());
             dbPrint('Opening : [%s]\n' , outputFileName)
-            
+
             fid = fopen(outputFileName, 'w+', machineformat);
             if fid == -1
                error('irisFetch:Traces:unableToWriteFile',...
@@ -2709,18 +2709,18 @@ function [M, argType] = getSetters(obj)
             % WRITE SAC FIELDS
             dbPrint('  Modifying with actual values')
             write_trace_header_to_sac(fid, trace)
-            
+
             % WRITE DATA
             dbPrint('  Writing data values')
             write_sac_data_values(fid, trace)
             dbPrint('  CLOSING')
             fclose(fid);
-            
+
             function name = outputname_from_trace()
                % ouputname_from_trace returns an automatic name for SACfile
                % output as NETWK.STA.LOC.CHA.JDAY.H.M.S.SAC
                % output as IU.ANMO.00.BHZ.135.23.59.59 (NETWK)
-               
+
                % matlabdate = datenummx(1970, 1, 1, 0, 0, trace.getStartTime.getTime()/1000);
                formatstring = [...
                   '%s.' ... Network
@@ -2764,12 +2764,12 @@ function [M, argType] = getSetters(obj)
                end
             end
          end
-         
+
          function typeDetail = type_details(sacField)
             % retrieve details about the requested SAC field in a structure
             % that is defined in get_header_definition()
             persistent allTypeDetails
-            
+
             if isempty(allTypeDetails)
                allTypeDetails = containers.Map('KeyType', 'char', 'ValueType', 'any');
                headerDefinition = get_header_definition();
@@ -2782,12 +2782,12 @@ function [M, argType] = getSetters(obj)
             end
             typeDetail = allTypeDetails(sacField);
          end
-         
+
          function offsetInBytes = field_offset(sacField)
             % get offset (in bytes) for a given SAC field name.
-            
+
             persistent offset
-            
+
             if isempty(offset)
                % this only runs once per session.
                nBytesPerWord = 4;
@@ -2802,7 +2802,7 @@ function [M, argType] = getSetters(obj)
             end
             offsetInBytes = offset(sacField);
          end
-         
+
          function headerDefinition = get_header_definition()
             % get_header_definition returns a cell of {name, word, type; ... }
             %
@@ -2813,44 +2813,44 @@ function [M, argType] = getSetters(obj)
             %       OUTCLASS is the class used to write it out to file
             %       NBYTES is the number of bites the value occupies
             %       DEFAULTVALUE is the default value used when initializing a header
-            
+
             persistent myHeaderDefinition
-            
+
             if ~isempty(myHeaderDefinition)
                headerDefinition = myHeaderDefinition;
                return
             end
-            
+
             % ------- Each struct defines a header field -------
             % F: single precision floating point number
             F.outClass = 'single'; F.nBytes = 4;
             F.defaultValue = single(-12345.0);
-            
+
             % K8: 8 character field
             K8.outClass = 'char'; K8.nBytes = 4;
             K8.defaultValue = '-12345  ';
-            
+
             % K16: 16 character field
             K16.outClass = 'char'; K16.nBytes = 8;
             K16.defaultValue = '-12345          ';
-            
+
             % L: Logical field, but stored as 32byte INT on disk
             L.outClass ='int32'; L.nBytes = 4;
             L.defaultValue = int32(false);
-            
+
             % I: Enumerated class, stored as a 32byte INT on disk.
             I.outClass = 'int32'; I.nBytes = 4;
             I.defaultValue = int32(-12345);
-            
+
             % N: a 32 byte INT
             N.outClass = 'int32'; N.nBytes = 4;
             N.defaultValue = int32(-12345);
-            
+
             %SYMANTICS... Actually for K8 and K16, it's 8 and 16 bytes
             %respectively.
             % ------------------------------------------------------------
-            
-            
+
+
             % {field name, offset in words (2 bytes each), data type}
             myHeaderDefinition = {
                'DELTA', 0, F;
@@ -2987,15 +2987,15 @@ function [M, argType] = getSetters(obj)
                'KDATRD', 154, K8;
                'KINST', 156, K8;
                };
-            
+
             headerDefinition = myHeaderDefinition;
-         end         
+         end
       end
-      
+
       %
       % END SAC Read/Write routines
       %
-      
+
       function doy = day_of_year(javadate)
          if isjava(javadate)
             mdate = irisFetch.jdate2mdate(javadate);
@@ -3005,14 +3005,14 @@ function [M, argType] = getSetters(obj)
          [y, ~, ~] = datevec(mdate);
          doy = fix(datenum(mdate)) - datenum([y - 1, 12, 31, 0, 0, 0]);
       end
-      
+
       function f = getDBfprintf(verbosity)
          % get a function that conditionally displays messages.
          %   dbPrint = irisFetch.getDBfprintf(verbosity)
          %      where VERBOSITY is true or false
          % then use dbPrint instead of fprintf (to console only!) or disp
          % dbPrint('This is a thing'); % will show this ONLY if verbosity
-         % was set to true when dbPrint was retrieved.         
+         % was set to true when dbPrint was retrieved.
          %   dbPrint = irisFetch.getDBfprintf(verbosity)
          if verbosity
             f = @irisFetch.verbosePrint;
@@ -3020,12 +3020,12 @@ function [M, argType] = getSetters(obj)
             f = @irisFetch.doNothing;
          end
       end
-      
+
       function doNothing(varargin)
          % this function does nothing.
          % used by irisFetch.getDBfprintf when verbosity is false
       end
-      
+
       function verbosePrint(varargin)
          % this function replaces fprintf and printf to conditionally
          % print information to the console. used by irisFetch.getDBfprintf
@@ -3036,7 +3036,6 @@ function [M, argType] = getSetters(obj)
             fprintf(varargin{:});
          end
       end
-      
+
    end %static protected methods
 end
-
