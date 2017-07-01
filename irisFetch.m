@@ -59,9 +59,9 @@ classdef irisFetch
    %}
 
    properties (Constant = true)
-      VERSION           = '2.0.8';  % irisFetch version number
+      VERSION           = '2.0.9';  % irisFetch version number
       DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
-      MIN_JAR_VERSION   = '2.0.4'; % minimum version of IRIS-WS jar required for compatibility
+      MIN_JAR_VERSION   = '2.0.15'; % minimum version of IRIS-WS jar required for compatibility
 
       VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
       DEFAULT_QUALITY   = 'B'; % default Quality for Traces
@@ -192,6 +192,14 @@ classdef irisFetch
          %  settings are "sticky", so that all calls for waveform data or station metadata
          %  will go to that datacenter until a new one is specified.
          %
+         %  tr = irisFetch.Traces(..., 'DATASELECTURL:http://host/path/to/dataselect')
+         %  will explicity set the URL to the fdsnws-dataselect web service to fetch
+         %  time series data from.
+         %
+         %  tr = irisFetch.Traces(..., 'STATIONURL:http://host/path/to/dataselect')
+         %  will explicity set the URL to the fdsnws-station web service to fetch
+         %  metadata data from.
+         %
          %  tr = irisFetch.Traces(..., 'WRITESAC:writeDir') will retrieve seismic traces
          %  and then write a SAC file to the directory specified by 'writeDir' for each
          %  trace structure. This method will also store the retrieved waveform data in
@@ -274,12 +282,23 @@ classdef irisFetch
          tracedata.setAppName(irisFetch.appName);
          tracedata.setVerbosity(opts.verbosity);
 
+         % Set new base URL if specified
          if ~isempty(opts.newbase)
              if strcmp(opts.newbase(end),'/')
                  opts.newbase = opts.newbase(1:end-1);
              end
              tracedata.setBASE_URL(opts.newbase);
              dbPrint('Using services at base: %s\n', opts.newbase);
+         end
+
+         % Set specific service URLs if specified
+         if ~isempty(opts.dataselectURL)
+             tracedata.setWAVEFORM_URL(opts.dataselectURL)
+             dbPrint('Using dataselect service at: %s\n', opts.dataselectURL);
+         end
+         if ~isempty(opts.stationURL)
+             tracedata.setSTATION_URL(opts.stationURL)
+             dbPrint('Using station service at: %s\n', opts.stationURL);
          end
 
          if ~opts.useFederator
@@ -350,7 +369,7 @@ classdef irisFetch
                       case 'STATIONSERVICE'
                          tracedata.setSTATION_URL(url)
                   end
-                  dbPrint('[%s] : %-10s > %s\n',currDataCenter, svc, url');
+                  dbPrint('[%s] : %-10s > %s\n',currDataCenter, svc, url);
                else
                   network = nets{row};
                   station = stas{row};
@@ -417,6 +436,12 @@ classdef irisFetch
                            if length(param)>7 && strcmpi(param(1:7),'http://')
                               % set the bases
                               opts.newbase = param;
+                           elseif length(param) > 13 && strcmpi(param(1:13),'DATASELECTURL')
+                              % expecting 'DATASELECTURL:http://host/path/to/dataselect'
+                              opts.dataselectURL = param(15:end)
+                           elseif length(param) > 10 && strcmpi(param(1:10),'STATIONURL')
+                              % expecting 'STATIONURL:http://host/path/to/station'
+                              opts.stationURL = param(12:end)
                            elseif length(param) >= 8 && strcmpi(param(1:8),'WRITESAC')
                               % expecting 'WRITESAC' or
                               % 'WRITESAC:full/directory/path'
@@ -511,6 +536,8 @@ classdef irisFetch
             opts.username    = '';
             opts.userpwd     = '';
             opts.newbase     = '';
+            opts.dataselectURL = '';
+            opts.stationURL  = '';
             opts.useFederator = false;
             opts.writeDirectory = '';
             opts.convertToMatlab = true;
