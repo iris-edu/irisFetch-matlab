@@ -1,10 +1,10 @@
 # irisFetch-matlab
 
-##Summary
+## Summary
 
 The MATLAB file irisFetch.m provides an interface for access to data stored within the IRIS-DMC as well as other data centers that implement FDSN web services.
 
-##Description
+## Description
 
 The file irisFetch.m provides a collection of routines that allow access to:
 
@@ -12,7 +12,7 @@ The file irisFetch.m provides a collection of routines that allow access to:
 * station metadata, providing details down to the instrument response level
 * event parameters, including magnitudes and locations of earthquakes
 
-##Setup and Installation
+## Setup and Installation
 
 The irisFetch.m script requires a Java JAR file to be present in the MATLAB java class path in order to communicate with the FDSN web services.  The most recent version of the JAR file can be obtained from the IRIS software download page: http://ds.iris.edu/ds/nodes/dmc/software/downloads/IRIS-WS/
 
@@ -21,7 +21,7 @@ For convenience, the user may elect to add a line similar to the one below to th
 javaaddpath('/path/to/jar/IRIS-WS.jar')
 ```
 
-##Usage and Examples
+## Usage and Examples
 
 The data request methods for irisFetch address a broad range of needs for station metadata, earthquake hypocentral parameters, and seisimc trace data.  For more detailed information about these methods and usage examples, please refer to the irisFetch software manual page: http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisFetch.m/2-0-6/manual/
 
