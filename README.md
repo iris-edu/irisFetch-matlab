@@ -23,7 +23,7 @@ javaaddpath('/path/to/jar/IRIS-WS.jar')
 
 ## Usage and Examples
 
-The data request methods for irisFetch address a broad range of needs for station metadata, earthquake hypocentral parameters, and seisimc trace data.  For more detailed information about these methods and usage examples, please refer to the irisFetch software manual page: http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisFetch.m/2-0-6/manual/
+The data request methods for irisFetch address a broad range of needs for station metadata, earthquake hypocentral parameters, and seisimc trace data.  For more detailed information about these methods and usage examples, please refer to the irisFetch software manual page: http://ds.iris.edu/ds/nodes/dmc/software/downloads/irisFetch.m/2-0-9/manual/
 
 Additionally, several example requests for retrieving and plotting trace or event data may be seen by running the following command from MATLAB:
 ```
