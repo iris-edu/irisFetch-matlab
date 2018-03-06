@@ -59,14 +59,14 @@ classdef irisFetch
    %}
 
    properties (Constant = true)
-      VERSION           = '2.0.10';  % irisFetch version number
-      DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
-      MIN_JAR_VERSION   = '2.0.15'; % minimum version of IRIS-WS jar required for compatibility
+     VERSION           = '2.0.10';  % irisFetch version number
+     DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
+     MIN_JAR_VERSION   = '2.0.15'; % minimum version of IRIS-WS jar required for compatibility
 
-%      VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
-%      DEFAULT_QUALITY   = 'M'; % default Quality for Traces
-      FETCHER_LIST      = {'Traces','Stations','Events','Resp'}; % list of functions that fetch
-      forceDataAsDouble = true; %require that traces are returned as doubles regardless of original format
+     VALID_QUALITIES   = {'D','R','Q','M','B'}; % list of Qualities accepted by Traces
+     DEFAULT_QUALITY   = 'M'; % default Quality for Traces
+     FETCHER_LIST      = {'Traces','Stations','Events','Resp'}; % list of functions that fetch
+     forceDataAsDouble = true; %require that traces are returned as doubles regardless of original format
    end %constant properties
 
    properties (Constant = true, Hidden = true)
@@ -222,7 +222,7 @@ classdef irisFetch
          %    are grouped by datacenter.  The result will be a structure,
          %    containing fields with the name of the data center.
          %    Using a concrete example, if I request:
-         %      tr = irisFetch.Traces('?R','A*','*','BHZ','2010-02-27 6:30:00', '2010-02-27 6:31:00','federated')
+         %      tr = irisFetch.Traces('?R','A*','*','BHZ','2010-02-27 6:30:00','2010-02-27 6:31:00','federated')
          %
          %    irisFetch first queries the federator service located at:
          %        http://service.iris.edu/irisws/fedcatalog/1/
@@ -417,8 +417,8 @@ classdef irisFetch
                      opts.authorize         = true;
                   case 'char'
                      switch upper(param)
-%                         case irisFetch.VALID_QUALITIES
-%                            opts.quality     = param;
+                        case irisFetch.VALID_QUALITIES
+                           opts.quality     = param;
                         case {'INCLUDEPZ'}
                            opts.getsacpz    = true;
                         case {'VERBOSE'}
@@ -1960,9 +1960,6 @@ classdef irisFetch
                s.Description             = char(value.getDescription());
                s.StartDate               = irisFetch.jdate2mdate(value.getStartDate());
                s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate());
-               % s.StartTime               = irisFetch.jdate2mdate(value.getStartTime());
-               % s.EndTime                 = irisFetch.jdate2mdate(value.getEndTime());
-               % assert(strcmp(datestr(s.StartTime,31), datestr(s.StartDate,31)),'dates don''t match for network %s  %s vs %s\n',s.Code, datestr(s.StartTime,31), datestr(s.StartDate,31))
                s.DataAvailability        = irisFetch.parse(value.getDataAvailability()); % get edu.iris.dmc.fdsn.station.model.DataAvailability
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                s.AlternateCode           = char(value.getAlternateCode());
@@ -1970,30 +1967,23 @@ classdef irisFetch
 
 
             case {'edu.iris.dmc.fdsn.station.model.Channel'}
-                keyboard
-               s.ChannelCode                    = char(value.getCode());
+               s.ChannelCode             = char(value.getCode());
                s.LocationCode            = char(value.getLocationCode());
                s.Description             = char(value.getDescription());
-               s.Type = char(value.getType());
+               s.Type                    = char(value.getType());
+               
+               % Retrieve instrument sensitivity. These values are the INPUT units
                s.Response                = irisFetch.parse(value.getResponse());    % get edu.iris.dmc.fdsn.station.model.Response
-               % take the instrument sensitivity. These values are the INPUT units, which
-               % matches previous irisFetch
-               
-               %%% RTW TESTING %%%
                if isempty(s.Response)
-               end
-               %%% END RTW TESTING %%%
-               
-               if isstruct(s.Response.InstrumentSensitivity)
-                  s.SensitivityFrequency= s.Response.InstrumentSensitivity.Frequency;
-                  s.SensitivityUnitDescription = s.Response.InstrumentSensitivity.InputUnits{2};
-                  s.SensitivityUnits = s.Response.InstrumentSensitivity.InputUnits{1};
-                  s.SensitivityValue = s.Response.InstrumentSensitivity.Value;
-               else
                   s.SensitivityFrequency = NaN;
                   s.SensitivityUnitDescription = '';
                   s.SensitivityUnits = '';
                   s.SensitivityValue = NaN;
+               elseif isstruct(s.Response.InstrumentSensitivity)
+                  s.SensitivityFrequency= s.Response.InstrumentSensitivity.Frequency;
+                  s.SensitivityUnitDescription = s.Response.InstrumentSensitivity.InputUnits{2};
+                  s.SensitivityUnits = s.Response.InstrumentSensitivity.InputUnits{1};
+                  s.SensitivityValue = s.Response.InstrumentSensitivity.Value;
                end
 
                s.Equipment               = irisFetch.parse(value.getEquipment());   % get edu.iris.dmc.fdsn.station.model.Equipment
@@ -2011,14 +2001,10 @@ classdef irisFetch
                s.Depth              = value.getDepthValue().doubleValue;
                s.Azimuth            = value.getAzimuthValue().doubleValue;
                s.Dip                = value.getDipValue().doubleValue;
-
                s.SampleRate         = value.getSampleRateValue().doubleValue;
 
                s.CalibrationUnits        = irisFetch.parse(value.getCalibrationUnits()); % get edu.iris.dmc.fdsn.station.model.Units
-               %         s.Comment = irisFetch.parseAnArray(value.getComment());
-               %s.StartTime               = irisFetch.jdate2mdate(value.getStartTime());
                s.StartDate               = irisFetch.jdate2mdate(value.getStartDate());% duplicates StartTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
-               %s.EndTime                 = irisFetch.jdate2mdate(value.getEndTime());
                s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate());% duplicates EndTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
                s.DataAvailability        = irisFetch.parse(value.getDataAvailability()); % get edu.iris.dmc.fdsn.station.model.DataAvailability
                s.RestrictedStatus        = char(value.getRestrictedStatus());
@@ -2043,10 +2029,8 @@ classdef irisFetch
                % s.ExternalReference = irisFetch.parseAnArray(value.getExternalReference());
                s.Comment = irisFetch.parseAnArray(value.getComment());
                s.Description             = char(value.getDescription());
-               %s.StartTime               = irisFetch.jdate2mdate(value.getStartTime());
-               %s.EndTime                 = irisFetch.jdate2mdate(value.getEndTime());
-               s.StartDate               = irisFetch.jdate2mdate(value.getStartDate()); % duplicates StartTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
-               s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate()); % duplicates EndTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
+               s.StartDate               = irisFetch.jdate2mdate(value.getStartDate());
+               s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate());
                s.DataAvailability        = irisFetch.parse(value.getDataAvailability()); % get edu.iris.dmc.fdsn.station.model.DataAvailability
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                %s.HistoricalCode          = char(value.getHistoricalCode());
@@ -2058,12 +2042,10 @@ classdef irisFetch
                s.NetworkCode                    = char(value.getCode());
                s.Description             = char(value.getDescription());
                s.Comment                 = irisFetch.parseAnArray(value.getComment());
-               %s.StartTime               = irisFetch.jdate2mdate(value.getStartTime());
-               s.StartDate               = irisFetch.jdate2mdate(value.getStartDate());% duplicates StartTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
-               %s.EndTime                 = irisFetch.jdate2mdate(value.getEndTime());
+               s.StartDate               = irisFetch.jdate2mdate(value.getStartDate());
+               s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate());
                s.TotalNumberStations     = double(value.getTotalNumberStations());
                s.SelectedNumberStations  = double(value.getSelectedNumberStations());
-               s.EndDate                 = irisFetch.jdate2mdate(value.getEndDate()); % duplicates EndTime ( but using org.apache.xerces.jaxp.datatype.XMLGregorianCalendarImpl)
                s.DataAvailability        = irisFetch.parse(value.getDataAvailability()); % get edu.iris.dmc.fdsn.station.model.DataAvailability
                s.Stations                = irisFetch.parseAnArray(value.getStations());
                s.RestrictedStatus        = char(value.getRestrictedStatus());
