@@ -72,11 +72,6 @@ classdef irisFetch
    properties (Constant = true, Hidden = true)
       MS_IN_DAY         = 86400000; % milliseconds in day
       BASE_DATENUM      = 719529; % Matlab startdate=0000-Jan-1 vs java's startdate=1970-Jan-1
-
-      % GitHub link will only lead to latest release project page.
-%       GH_LATEST_JAR = 'https://github.com/iris-edu/iris-ws/releases/latest'
-      LATEST_JAR        = 'http://ds.iris.edu/files/IRIS-WS/2/IRIS-WS-2.0-latest.jar';
-
       M2J_MAP           = containers.Map (...
          {'java.util.Date',...
          'java.lang.Double',...
@@ -653,7 +648,7 @@ classdef irisFetch
          %  and use, consult the station webservice webpage, available at:
          %     http://service.iris.edu/fdsnws/station/1/
          %
-         %  PARAMETER LIST (for IRIS-WS-2.0.x.jar)
+         %  PARAMETER LIST
          %    The following take time values, of the format 'yyyy-mm-dd HH:MM:SS'
          %      'StartTime', 'EndTime', 'StartBefore', 'EndBefore'
          %      'StartAfter', 'EndAfter' 'UpdatedAfter'
@@ -942,7 +937,7 @@ classdef irisFetch
          %  irisFetch requires version 2.0.15 or greater of the IRIS Web Services Library,
          %  available from:
          %
-         %  http://ds.iris.edu/files/IRIS-WS/2/
+         %  http://github.com/iris-edu/iris-ws/releases/latest
          %
          %  This jar file must be added to your MATLAB path, which may be done
          %  in a variety of ways.  One common way is to include a javaaddpath
@@ -960,11 +955,27 @@ classdef irisFetch
          end
          
          if ~isSilent
-             disp('please add the latest IRIS-WS.jar file to your javaclasspath.');
-             fprintf('Available here: %s\n',irisFetch.LATEST_JAR);
-             disp('ex.  javaaddpath(''/usr/local/somewhere/IRIS-WS.jar'');');
+             keyboard
+             xml = evalc('!curl -L https://github.com/iris-edu/mseedindex/releases/latest');x
+             ver_pat = '>\d\.\d\.\d<';  % regexp for a version number triad
+             reg_out = regexp(xml,ver_pat,'match');
+             if numel(unique(reg_out))==1
+                 ver_str = char(unique(reg_out));
+                 ver_str = ver_str(2:end-1); % Trim the '>' and '<' characters
+                 github_base = 'https://github.com/iris-edu/iris-ws/releases/download/';
+                 latest_jar = [github_base ver_str '/IRIS-WS-' ver_str '.jar'];
+                 disp('Acquiring latest version of IRIS-WS Java library:')
+                 disp(latest_jar)
+                 javaaddpath(latest_jar);
+             else
+                 disp('Latest version of IRIS-WS Java library cannot be automatically determined.')
+                 disp('Please download the latest version of the .jar file from this link:')
+                 disp('  https://github.com/iris-edu/iris-ws/releases/latest');
+                 disp('Add the .jar file to your javaclasspath.');
+                 disp('  >> javaaddpath(''/usr/local/myworkdir/IRIS-WS.jar'');');
+             end
          end
-
+         
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class')
             error('irisFetch:noDefaultJar',...
                'Unable to access the default jar.  Please download and add the latest version of IRIS-WS library to your javaclasspath.');
