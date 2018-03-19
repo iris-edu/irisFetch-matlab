@@ -450,7 +450,6 @@ classdef irisFetch
                            else
                               error('IRISFETCH:Trace:unrecognizedParameter',...
                                  'The text you included as an optional parameter did not parse to either ''INCLUDEPZ'' or ''VERBOSE'' or a service base URL');
-%                                  'The text you included as an optional parameter did not parse to either a qualitytype (D,R,Q,M,B) or ''INCLUDEPZ'' or ''VERBOSE'' or a service base URL');
                            end
                      end
                   otherwise
@@ -458,7 +457,7 @@ classdef irisFetch
                         'The optional parameter wasn''t recognized. %s', class(param));
                end
             end
-            if opts.verbosity %cannot use dbPrint here, because this function gets called BEFORE dbPrint declared
+            if opts.verbosity
                disp({'spz:',opts.getsacpz,'vb:',opts.verbosity,...
                'auth:',opts.authorize,'qual:',opts.quality,...
                'un&pw:',opts.username,repmat('*',size(opts.userpwd))});
@@ -954,27 +953,48 @@ classdef irisFetch
             return
          end
          
+         % ~~~ IRIS DOWNLOAD ~~~
          if ~isSilent
-             keyboard
-             xml = evalc('!curl -L https://github.com/iris-edu/mseedindex/releases/latest');x
-             ver_pat = '>\d\.\d\.\d<';  % regexp for a version number triad
-             reg_out = regexp(xml,ver_pat,'match');
-             if numel(unique(reg_out))==1
-                 ver_str = char(unique(reg_out));
-                 ver_str = ver_str(2:end-1); % Trim the '>' and '<' characters
-                 github_base = 'https://github.com/iris-edu/iris-ws/releases/download/';
-                 latest_jar = [github_base ver_str '/IRIS-WS-' ver_str '.jar'];
-                 disp('Acquiring latest version of IRIS-WS Java library:')
-                 disp(latest_jar)
-                 javaaddpath(latest_jar);
+             disp('Retrieving latest version of IRIS-WS java library...');
+             latest_jar = 'http://ds.iris.edu/files/IRIS-WS/2/IRIS-WS-2.0-latest.jar';
+             javaaddpath(latest_jar);
+             if exist('edu.iris.dmc.extensions.fetch.TraceData','class')
+                 disp('IRIS-WS java library has been added to your Matlab java path.');
              else
-                 disp('Latest version of IRIS-WS Java library cannot be automatically determined.')
-                 disp('Please download the latest version of the .jar file from this link:')
-                 disp('  https://github.com/iris-edu/iris-ws/releases/latest');
-                 disp('Add the .jar file to your javaclasspath.');
-                 disp('  >> javaaddpath(''/usr/local/myworkdir/IRIS-WS.jar'');');
+                disp('Latest version of IRIS-WS Java library cannot be automatically determined.')
+                disp('Please download the latest version of the .jar file from this link:')
+                disp(latest_jar)
+                disp('And add the .jar file to your javaclasspath.');
+                disp('  >> javaaddpath(''/usr/local/myworkdir/IRIS-WS.jar'')');
              end
          end
+         % ~~~ IRIS DOWNLOAD ~~~    
+         
+         %   ~~~ GITHUB DOWNLOAD ~~~
+         % For automatically downloading library from GitHub
+%          if ~isSilent
+%              xml = evalc('!curl -L https://github.com/iris-edu/mseedindex/releases/latest');
+%              % xml = evalc('!curl -L https://github.com/iris-edu/iris-ws/releases/latest');
+%              ver_pat = '>v\d.\d<';
+% %              ver_pat = '>\d\.\d\.\d<';  % regexp for a version number triad
+%              ver_str = unique(regexp(xml,ver_pat,'match'));
+%              if numel(ver_str)==1
+%                  ver_str = char(strip(ver_str,'<'));
+%                  ver_str = strip(ver_str,'>');
+%                  github_base = 'https://github.com/iris-edu/iris-ws/releases/download/';
+%                  latest_jar = [github_base ver_str '/IRIS-WS-' ver_str '.jar'];
+%                  disp('Acquiring latest version of IRIS-WS Java library:')
+%                  disp(latest_jar)
+%                  javaaddpath(latest_jar);
+%              else
+%                  disp('Latest version of IRIS-WS Java library cannot be automatically determined.')
+%                  disp('Please download the latest version of the .jar file from this link:')
+%                  disp('  https://github.com/iris-edu/iris-ws/releases/latest');
+%                  disp('And add the .jar file to your javaclasspath.');
+%                  disp('  >> javaaddpath(''/usr/local/myworkdir/IRIS-WS.jar'')');
+%              end
+%          end
+        %   ~~~ GITHUB DOWNLOAD ~~~
          
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class')
             error('irisFetch:noDefaultJar',...
