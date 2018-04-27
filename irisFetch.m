@@ -260,7 +260,7 @@ classdef irisFetch
          %      ts = irisFetch.Traces('IU','ANMO,ANTO,YSS','00','*','2010-02-27 06:30:00','2010-02-27 10:30:00')
          %
          %  SEE ALSO datestr
-
+         
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class')
             irisFetch.connectToJar()
          end
