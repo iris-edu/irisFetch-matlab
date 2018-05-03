@@ -2464,6 +2464,7 @@ classdef irisFetch
                  hn = [fread(fid,[5,14],'float32'),fread(fid,[5,8],'int32')]; hn = hn(:);
                  hs = cellstr(fread(fid,[8,24],'*char')');
                  hd = fread(fid,'float32');
+                 fclose(fid);
              end
 
              % Match up the header name with its value
