@@ -59,7 +59,7 @@ classdef irisFetch
    %}
 
    properties (Constant = true)
-     VERSION           = '2.0.10';  % irisFetch version number
+     VERSION           = '2.0.11';  % irisFetch version number
      DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
      MIN_JAR_VERSION   = '2.0.15'; % minimum version of IRIS-WS jar required for compatibility
 
@@ -90,7 +90,7 @@ classdef irisFetch
       recursionAssert   = false; %check for recursions while parsing java into structs
       FEDERATOR_TRIGGER = 'FEDERATED';
       FEDERATOR_BASEURL = 'http://service.iris.edu/irisws/fedcatalog/1/';
-      FEDERATOR_LABELS = {'DATACENTER','RESPSERVICE','EVENTSERVICE','STATIONSERVICE','DATASELECTSERVICE','SACPZSERVICE'};
+      FEDERATOR_LABELS = {'DATACENTER','RESPSERVICE','EVENTSERVICE','STATIONSERVICE','DATASELECTSERVICE','SACPZSERVICE','AVAILABILITYSERVICE'};
    end %hidden constant properties
 
    methods(Static)
@@ -361,8 +361,12 @@ classdef irisFetch
                   switch svc
                       case 'DATASELECTSERVICE'
                          tracedata.setWAVEFORM_URL(url)
-%                       case 'SACPZSERVICE' %
-%                          tracedata.setSACPZ_URL(url)
+                      case 'SACPZSERVICE'
+                          % setting SACPZ url service will not work until
+                          % library is patched. Currently, setSACPZ_URL
+                          % method will always append "/irisws/sacpz/1/"
+                          %   tracedata.setSACPZ_URL(url)
+                        sacpz_svc_incl = 1;
                       case 'STATIONSERVICE'
                          tracedata.setSTATION_URL(url)
                   end
@@ -374,6 +378,14 @@ classdef irisFetch
                   channel = chas{row};
                   startDateStr = web2strdate(stts{row});
                   endDateStr = web2strdate(edts{row});
+
+                  % Check if datacenter includes a sacpz web service, edit
+                  % opts.sacpz field if no service available.
+                  if exist('sacpz_svc_incl','var')
+                      opts.getsacpz = 1;
+                  else
+                      opts.getsacpz = 0;
+                  end
 
                   dbPrint('query : %s\n', q);
                   tmp = getTheTraces(network, station, location, channel, startDateStr, endDateStr, opts);
