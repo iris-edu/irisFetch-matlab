@@ -442,8 +442,11 @@ classdef irisFetch
                         otherwise
 
                            if length(param)>7 && strcmpi(param(1:7),'http://')
-                              % set the bases
+                              % set service base
                               opts.newbase = param;
+                           elseif length(param)>8 && strcmpi(param(1:8),'https://')
+                               % set service base
+                               opts.newbase = param;
                            elseif length(param) > 13 && strcmpi(param(1:13),'DATASELECTURL')
                               % expecting 'DATASELECTURL:http://host/path/to/dataselect'
                               opts.dataselectURL = param(15:end);
