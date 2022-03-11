@@ -59,7 +59,7 @@ classdef irisFetch
    %}
 
    properties (Constant = true)
-     VERSION           = '2.0.11';  % irisFetch version number
+     VERSION           = '2.0.12';  % irisFetch version number
      DATE_FORMATTER    = 'yyyy-mm-dd HH:MM:SS.FFF'; %default data format, in ms
      MIN_JAR_VERSION   = '2.0.15'; % minimum version of IRIS-WS jar required for compatibility
 
@@ -260,7 +260,7 @@ classdef irisFetch
          %      ts = irisFetch.Traces('IU','ANMO,ANTO,YSS','00','*','2010-02-27 06:30:00','2010-02-27 10:30:00')
          %
          %  SEE ALSO datestr
-         
+                  
          if ~exist('edu.iris.dmc.extensions.fetch.TraceData','class')
             irisFetch.connectToJar()
          end
@@ -290,11 +290,11 @@ classdef irisFetch
 
          % Set specific service URLs if specified
          if ~isempty(opts.dataselectURL)
-             tracedata.setWAVEFORM_URL(opts.dataselectURL)
+             tracedata.setWAVEFORM_URL(opts.dataselectURL);
              dbPrint('Using dataselect service at: %s\n', opts.dataselectURL);
          end
          if ~isempty(opts.stationURL)
-             tracedata.setSTATION_URL(opts.stationURL)
+             tracedata.setSTATION_URL(opts.stationURL);
              dbPrint('Using station service at: %s\n', opts.stationURL);
          end
 
@@ -360,7 +360,7 @@ classdef irisFetch
                   end
                   switch svc
                       case 'DATASELECTSERVICE'
-                         tracedata.setWAVEFORM_URL(url)
+                         tracedata.setWAVEFORM_URL(url);
                       case 'SACPZSERVICE'
                           % setting SACPZ url service will not work until
                           % library is patched. Currently, setSACPZ_URL
@@ -368,7 +368,7 @@ classdef irisFetch
                           %   tracedata.setSACPZ_URL(url)
                         sacpz_svc_incl = 1;
                       case 'STATIONSERVICE'
-                         tracedata.setSTATION_URL(url)
+                         tracedata.setSTATION_URL(url);
                   end
                   dbPrint('[%s] : %-10s > %s\n',currDataCenter, svc, url);
                else
@@ -446,10 +446,10 @@ classdef irisFetch
                               opts.newbase = param;
                            elseif length(param) > 13 && strcmpi(param(1:13),'DATASELECTURL')
                               % expecting 'DATASELECTURL:http://host/path/to/dataselect'
-                              opts.dataselectURL = param(15:end)
+                              opts.dataselectURL = param(15:end);
                            elseif length(param) > 10 && strcmpi(param(1:10),'STATIONURL')
                               % expecting 'STATIONURL:http://host/path/to/station'
-                              opts.stationURL = param(12:end)
+                              opts.stationURL = param(12:end);
                            elseif length(param) >= 8 && strcmpi(param(1:8),'WRITESAC')
                               % expecting 'WRITESAC' or
                               % 'WRITESAC:full/directory/path'
@@ -501,21 +501,25 @@ classdef irisFetch
 
                switch je.identifier
                   case 'MATLAB:Java:GenericException'
-                     if any(strfind(je.message,'URLNotFoundException'));
+                     if any(strfind(je.message,'URLNotFoundException'))
                         error('IRISFETCH:Trace:URLNotFoundException',...
                            'Trace found no requested data and returned the following error:\n%s',...
                            je.message);
                      end
-                     if any(strfind(je.message,'java.io.IOException: edu.iris.dmc.service.UnauthorizedAccessException'));
-                        error('IRISFETCH:Trace:UnauthorizedAccessException',...
-                           'Invalid Username and Password combination\n');
+                     if any(strfind(je.message,'java.io.IOException: edu.iris.dmc.service.UnauthorizedAccessException'))
+                         error('IRISFETCH:Trace:UnauthorizedAccessException',...
+                             'Invalid Username and Password combination\n');
                      end
-                     if any(strfind(je.message,'NoDataFoundException'));
-                        if opts.verbosity
-                           warning('IRISFETCH:Trace:URLNotFoundException',...
-                              'Trace found no requested data and returned the following error:\n%s',...
-                              je.message);
-                        end
+                     if any(strfind(je.message,'parseMetadata'))
+                         error('IRISFETCH:Trace:Metadata',...
+                             'Incomplete metadata detected. Please contact ws-issues@iris.washington.edu with details about your request\n');
+                     end
+                     if any(strfind(je.message,'NoDataFoundException'))
+                         if opts.verbosity
+                             warning('IRISFETCH:Trace:URLNotFoundException',...
+                                 'Trace found no requested data and returned the following error:\n%s',...
+                                 je.message);
+                         end
                      end
                   otherwise
                      fprintf('Exception occured in IRIS Web Services Library: %s\n', je.message);
@@ -2716,7 +2720,7 @@ classdef irisFetch
                   end
             end
             fieldpos = field_offset(sacfield);
-            if ftell(fid) == fieldpos || fseek(fid, fieldpos, 'bof') ~= -1;
+            if ftell(fid) == fieldpos || fseek(fid, fieldpos, 'bof') ~= -1
                %TODO make sure fseek successful!
                fwrite(fid, value, thisField.outClass);
             else
