@@ -337,7 +337,7 @@ classdef irisFetch
                network, station, location, channel, stD, edD);
             fullquery = [irisFetch.FEDERATOR_BASEURL, 'query?',  q];
             dbPrint('Fetching federator catalog results :: ');
-            fedResults = urlread(fullquery);
+            fedResults = webread(fullquery);
             dbPrint('%d Bytes\n',numel(fedResults));
             dbPrint(fedResults)
             assignin('base','fedResults',fedResults);
@@ -1240,7 +1240,7 @@ classdef irisFetch
                datestr(irisFetch.jdate2mdate(javadateTime),irisFetch.DATE_FORMATTER);
             %urlString         = char(criteria.toUrlParams().get(0));
             urlString         = crit.toUrlParams().get(0).toCharArray()';
-            if ~(all(reconvertedMatlabTime == matlabTimeString));
+            if ~(all(reconvertedMatlabTime == matlabTimeString))
                disp(s-fix(s));
                if datenum(reconvertedMatlabTime) > datenum(t)
                   fprintf('^ ');
@@ -1645,6 +1645,7 @@ classdef irisFetch
                   'edu.iris.dmc.fdsn.station.model.LongitudeBaseType'
                   'edu.iris.dmc.fdsn.station.model.LatitudeBaseType'
                   'edu.iris.dmc.fdsn.station.model.Float'
+                  'edu.iris.dmc.fdsn.station.model.Coefficient'
                   }
                s                  = value.getValue();
                % unused get routines: getUnit, getPlusError,getMinusError
@@ -1702,7 +1703,6 @@ classdef irisFetch
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
 
-
             case {'edu.iris.dmc.fdsn.station.model.package-info'}
 
             case {'edu.iris.dmc.fdsn.station.model.BaseFilter'}
@@ -1737,7 +1737,6 @@ classdef irisFetch
                s.Decimation              = irisFetch.parse(value.getDecimation());  % get edu.iris.dmc.fdsn.station.model.Decimation
                s.StageGain               = irisFetch.parse(value.getStageGain());   % get edu.iris.dmc.fdsn.station.model.Gain
 
-
             case {'edu.iris.dmc.fdsn.station.model.SampleRateRatioType'}
                s.NumberSamples           = double(value.getNumberSamples());
                s.NumberSeconds           = double(value.getNumberSeconds());
@@ -1760,7 +1759,6 @@ classdef irisFetch
                s.FloatData               = irisFetch.parseAnArray(value.getFloatData());
                s.IntData                 = irisFetch.parseAnArray(value.getIntData());
                s.ExpectedNextSampleTime  = irisFetch.parse(value.getExpectedNextSampleTime()); % get java.sql.Timestamp
-
 
             case {'edu.iris.dmc.fdsn.station.model.PhoneNumberType'}
                s.Phone = sprintf('%s: [+%d] %03d %s',... % desc: [+country] area phonenum
@@ -1833,7 +1831,6 @@ classdef irisFetch
             case {'edu.iris.dmc.fdsn.station.model.DataAvailabilityExtent'}
                s.End                     = irisFetch.jdate2mdate(value.getEnd());
                s.Start                   = irisFetch.jdate2mdate(value.getStart());
-
 
             case {'edu.iris.dmc.fdsn.station.model.Coefficients'}
                s.CfTransferFunctionType  = char(value.getCfTransferFunctionType());
@@ -1977,12 +1974,10 @@ classdef irisFetch
                s.name                    = char(value.name());
                s.ordinal                 = value.ordinal();
 
-
             case {'edu.iris.dmc.fdsn.station.model.Response'}
                s.InstrumentSensitivity   = irisFetch.parse(value.getInstrumentSensitivity()); % get edu.iris.dmc.fdsn.station.model.Sensitivity
                s.Stage = irisFetch.parseAnArray(value.getStage());
                s.InstrumentPolynomial    = irisFetch.parse(value.getInstrumentPolynomial()); % get edu.iris.dmc.fdsn.station.model.Polynomial
-
 
             case {'edu.iris.dmc.fdsn.station.model.Station$Operator'}
                s.Agency = irisFetch.parseAnArray(value.getAgency());
@@ -2004,7 +1999,7 @@ classdef irisFetch
                s.Phone = irisFetch.parseAnArray(value.getPhone());
 
             case {'edu.iris.dmc.fdsn.station.model.BaseNodeType'}
-               assert('did not expect to get here');
+               error('did not expect to get here');
                s.Comment = irisFetch.parseAnArray(value.getComment());
                s.Code                    = char(value.getCode());
                s.Description             = char(value.getDescription());
@@ -2014,7 +2009,6 @@ classdef irisFetch
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                s.AlternateCode           = char(value.getAlternateCode());
                s.HistoricalCode          = char(value.getHistoricalCode());
-
 
             case {'edu.iris.dmc.fdsn.station.model.Channel'}
                s.ChannelCode             = char(value.getCode());
@@ -2101,7 +2095,6 @@ classdef irisFetch
                s.RestrictedStatus        = char(value.getRestrictedStatus());
                % s.AlternateCode           = char(value.getAlternateCode());
                % s.HistoricalCode          = char(value.getHistoricalCode());
-
 
             case {'edu.iris.dmc.sacpz.model.Sacpz'}
                s.Location                = char(value.getLocation());
