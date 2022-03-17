@@ -2097,7 +2097,6 @@ classdef irisFetch
                % s.AlternateCode           = char(value.getAlternateCode());
                % s.HistoricalCode          = char(value.getHistoricalCode());
 
-
             case {'edu.iris.dmc.sacpz.model.Sacpz'}
                s.Location                = char(value.getLocation());
                s.Channel                 = char(value.getChannels());
