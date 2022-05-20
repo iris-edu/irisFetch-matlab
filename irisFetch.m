@@ -2461,24 +2461,94 @@ classdef irisFetch
              % Check SAC header and try byte order
              hn = [fread(fid,[5,14],'float32'),fread(fid,[5,8],'int32')]; hn = hn(:);
              hs = cellstr(fread(fid,[8,24],'*char')');
-             hd = fread(fid,'float32');
+%              data_id = ftell(fid);
+%              hd = fread(fid,'float32');
+%              hd_double = fread(fid,'float64');
 
-             if (hn(77) == 4 || hn(77) == 5)
-                 fclose(fid);
-                 error(['IRISFETCH:read_sac_in - NVHDR = 4 or 5. File: ' fileNames(i).name ...
-                     ' may be an old version of SAC'])
-             elseif hn(77) ~= 6
-                 fclose(fid);
-                 fid = fopen(fileNames(i).name,'r','ieee-be');
-                 if fid==-1
-                     error(['IRISFETCH:read_sac_in - Cannot open file: ' fileNames(i).name])
-                 end
-                 % Re-read SAC header after retrying byte order
-                 hn = [fread(fid,[5,14],'float32'),fread(fid,[5,8],'int32')]; hn = hn(:);
-                 hs = cellstr(fread(fid,[8,24],'*char')');
+
+             if hn(77) == 6
                  hd = fread(fid,'float32');
+
+                 % fclose(fid) ?
+                 
+             elseif hn(77) == 7
+                 disp(['IRISFETCH:SAC2TRACE - NVHDR = ' num2str(hn(77)) ...
+                     ' SAC v102.0 detected'])
+
+                 % Figure out where fid offset is in file
+                 data_id = ftell(fid);
+
+                 % Read all data as single-precision
+                 hd = fread(fid,'float32');
+
+                 % Go back to data segment beginning and read all data as
+                 % double-precision
+                 fseek(fid,data_id,'bof');
+                 footer64 = fread(fid,'float64');
+
+                 % Trim both single- and double-precision arrays
+                 hd = hd(1:end-44); footer64 = footer64(end-21:end);
+
+                 % Merge...need to map double-precision footer to the
+                 % values in hn (or hs..?)
+                 % list of values that are in double-precision and how they
+                 % map into hn(i)
+
+                 ids = [1; ...  % DELTA
+                     6; ...     % B
+                     7; ...     % E
+                     8; ...     % O
+                     9; ...     % A
+                     11; ...    % T0
+                     12; ...    % T1
+                     13; ...    % T2
+                     14; ...    % T3
+                     15; ...    % T4
+                     16; ...    % T5
+                     17; ...    % T6
+                     18; ...    % T7
+                     19; ...    % T8
+                     20; ...    % T9
+                     21; ...    % F
+                     41; ...    % EVLO
+                     40; ...    % EVLA
+                     37; ...    % STLO
+                     36; ...    % STLA
+                     59; ...    % SB
+                     60];       % SDELTA
+
+                 % Assign values
+%                  hn_new = hn;
+                 hn(ids) = footer64;
+
+                 % fclose(fid) ?
+
+             else
                  fclose(fid);
+                 error(['IRISFEETCH:read_sac_in - NVHDR = ' hn(77) '. File: ' fileNames(i).name ...
+                     ' may be an old version of SAC and is not currently supported by irisFetch.'])
              end
+
+
+
+% %              % This is all unhelpful with addressing SAC "v7" with the high precision footer
+% %              if (hn(77) == 4 || hn(77) == 5)
+% %                  fclose(fid);
+% %                  error(['IRISFETCH:read_sac_in - NVHDR = 4 or 5. File: ' fileNames(i).name ...
+% %                      ' may be an old version of SAC'])             
+% %              elseif hn(77) ~= 6
+% %                  fclose(fid);
+% %                  fid = fopen(fileNames(i).name,'r','ieee-be');
+% %                  if fid==-1
+% %                      error(['IRISFETCH:read_sac_in - Cannot open file: ' fileNames(i).name])
+% %                  end
+% %                  Re-read SAC header after retrying byte order
+% %                  hn = [fread(fid,[5,14],'float32'),fread(fid,[5,8],'int32')]; hn = hn(:);
+% %                  hs = cellstr(fread(fid,[8,24],'*char')');
+% %                  hd = fread(fid,'float32');
+% %                  fclose(fid);
+% %              end
+% %              % DUMB AND UNHELPFUL
 
              % Match up the header name with its value
              sac = make_sac_header(hn,hs);
